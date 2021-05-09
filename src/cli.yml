@@ -1,20 +1,9 @@
 name: RMIG
 version: "1.0"
-about: Light application for migration on database Postgres.
+about: Lightweight cross-platform data migration application.
 author: Sinmoway
 
-# All Args must be defined in the 'args:' list where the name of the arg, is the
-# key to a Hash object
 args:
-  # The name of this argument, is 'opt' which will be used to access the value
-  # later in your Rust code
-  - paths:
-      help: Path to changelog. It can take several values.
-      short: p
-      long: path
-      multiple: false
-      takes_value: true
-      default: ./changelog
   - logging_level:
       help: Set logger level on DEBUG or TRACE (1/2).
       short: d
@@ -33,23 +22,13 @@ args:
       long: env
       multiple: true
       takes_value: true
-  - user:
-      help: User for database
-      long: user
-      multiple: false
-      takes_value: true
-  - password:
-      help: Password for database
-      long: password
-      multiple: false
-      takes_value: true
   - url:
       help: Url for database
       long: url
       multiple: false
       takes_value: true
   - config:
-      help: Config file, supports yaml and json, see changelog.yml for more details. This env, override, and have high priority on\":\" --user, --url, --password, --env properties.
+      help: Config file, supports yaml and json, see changelog.yml for more details. This env, override, and have high priority on\":\" --url, --env properties.
       short: c
       long: config
       multiple: false

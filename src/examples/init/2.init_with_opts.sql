@@ -1,0 +1,3 @@
+--rmig--{"run_always": true}
+--rmig--{}
+--rmig--{"run_always": true, "global": true}

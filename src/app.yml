@@ -1,0 +1,31 @@
+app_name: RMIG
+about: Light application for migration on database Postgres.
+cmd_args:
+  - name: paths
+    about: Path to changelog. It can take several values.
+    short: p
+    long: paths
+    takes: true
+    multiply: true
+    default: ./changelogs
+  - name: debug
+    about: Set logger level on DEBUG or TRACE (1/2).
+    short: d
+    long: debug
+    takes: true
+    multiply: true
+  - name: properties
+    about: Properties for configuration and replacement (placeholders {{ you_placeholder }})
+    short: e
+    long: env
+    takes: true
+    multyply: true
+  - name: url
+    about: Url for database
+    long: url
+    takes: true
+  - name: config
+    about: Config file, supports yaml and json, see changelog.yml for more details
+    short: c
+    long: config
+    takes: true
