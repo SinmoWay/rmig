@@ -16,7 +16,7 @@ extern crate log4rs;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    AppRmigCli::default().init().run().await?;
+    AppRmigCli::default().init().execute().await?;
     Ok(())
 }
 

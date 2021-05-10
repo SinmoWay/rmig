@@ -13,12 +13,27 @@ use futures::executor::block_on;
 use log::{info, error};
 use crate::error::Error;
 use crate::enum_str;
+use std::str::FromStr;
 
 enum_str! {
  pub enum Command {
     STATUS = 0x00000,
     RUN = 0x00001,
  }
+}
+
+impl FromStr for Command {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let command = s.to_lowercase();
+        return if Command::STATUS.name().to_lowercase().eq(command.as_str()) {
+            Ok(Command::STATUS)
+        } else {
+            Ok(Command::RUN)
+        };
+        // Err(Error::NotFoundCommand(s.to_string()))
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -53,7 +68,7 @@ impl Cli {
 
 #[derive(Clone)]
 pub struct CliArgs {
-    changelogs: Option<Vec<String>>,
+    command: Option<Command>,
     logging_level: Option<LevelFilter>,
     url: Option<String>,
     config: Option<String>,
@@ -64,7 +79,7 @@ pub struct CliArgs {
 impl Default for CliArgs {
     fn default() -> Self {
         CliArgs {
-            changelogs: None,
+            command: None,
             logging_level: None,
             url: None,
             config: None,
@@ -85,18 +100,22 @@ pub struct CliReader {
 
 /// CliProcessor is implemented builder pattern and getting functionality from checking parameters
 impl CliReader {
+    /// Read subcommands [Command enum]
+    pub fn read_command(mut self) -> CliReader {
+        let command = match self.args_match.subcommand_name() {
+            None => { panic!("{}", "Not found command to execute. rmig --help for more information.") }
+            Some(s) => { Command::from_str(s) }
+        }.unwrap();
+        self.args.command.insert(command);
+        self
+    }
+
     /// Read properties [--logging_level/-d]
     pub fn read_logging_level(mut self) -> CliReader {
         let level_filter = match self.args_match.value_of("logging_level") {
             None => { LevelFilter::Info }
-            // TODO: Maybe use LevelFilter.from_usize implementation
             Some(level) => {
-                match level {
-                    "0" => LevelFilter::Warn,
-                    "1" => LevelFilter::Debug,
-                    "2" => LevelFilter::Trace,
-                    _ => LevelFilter::Info,
-                }
+                LevelFilter::from_str(&*level).unwrap_or(LevelFilter::Info)
             }
         };
         self.args.logging_level.insert(level_filter);
@@ -111,15 +130,27 @@ impl CliReader {
 
     /// Read properties [--url]
     pub fn read_url(mut self) -> CliReader {
-        self.args_match.value_of("url").map(|arg| String::from(arg)).map(|arg| self.args.url.insert(arg));
+        if let Some(c) = self.args.command.as_ref() {
+            if Command::RUN == c.clone() {
+                if let Some(m) = self.args_match.subcommand_matches(Command::RUN.name().to_lowercase()) {
+                    m.value_of("url").map(|arg| String::from(arg)).map(|arg| self.args.url.insert(arg));
+                }
+            }
+        }
         self
     }
 
     /// Read properties [--stage/-s]
     pub fn read_stage(mut self) -> CliReader {
-        let stage = self.args_match.values_of("stage")
-            .map(|value| value.into_iter().map(|v| String::from(v)).collect::<Vec<String>>());
-        self.args.stage = stage;
+        if let Some(c) = self.args.command.as_ref() {
+            if Command::RUN == c.clone() {
+                if let Some(m) = self.args_match.subcommand_matches(Command::RUN.name().to_lowercase()) {
+                    let stage = m.values_of("stage")
+                        .map(|value| value.into_iter().map(|v| String::from(v)).collect::<Vec<String>>());
+                    self.args.stage = stage;
+                }
+            }
+        }
         self
     }
 
@@ -140,20 +171,13 @@ impl CliReader {
         self
     }
 
-    pub fn read_changelogs(mut self) -> CliReader {
-        let changelogs = self.args_match.values_of("changelogs")
-            .map(|value| value.into_iter().map(|v| String::from(v)).collect::<Vec<String>>());
-        self.args.changelogs = changelogs;
-        self
-    }
-
     /// Read all configuration properties and return this instance
     pub fn read(self) -> CliReader {
-        self.read_logging_level()
+        self.read_command()
+            .read_logging_level()
             .read_config()
             .read_stage()
             .read_url()
-            .read_changelogs()
             .read_properties()
     }
 
@@ -186,6 +210,21 @@ impl AppRmigCli {
     fn read_args(mut self) -> AppRmigCli {
         self.args = self.arg_processor.args().to_owned();
         self
+    }
+
+    pub async fn execute(&mut self) -> anyhow::Result<(), Error> {
+        let command = self.args.command.as_ref().unwrap();
+        return if Command::RUN == *command {
+            self.run().await
+        } else if Command::STATUS == *command {
+            self.status().await
+        } else {
+            Err(Error::NotFoundCommand("Command not found.".to_string()))
+        }
+    }
+
+    pub async fn status(&mut self) -> anyhow::Result<(), Error> {
+        Ok(())
     }
 
     pub async fn run(&mut self) -> anyhow::Result<(), Error> {
@@ -252,6 +291,7 @@ impl AppRmigCli {
                                     }
                                     Err(e) => match e {
                                         // Ignoring other error's.
+                                        Error::NotFoundCommand(_) => {}
                                         Error::CreatingDatasourceError(_) => {}
                                         Error::LoggerConfigurationError(_) => {}
                                         Error::ParseError(_, _) => {}

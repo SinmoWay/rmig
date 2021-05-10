@@ -1,6 +1,7 @@
 #[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum Error {
-    // TODO: Поправить англ
+    #[error("Illegal command - {0}. Use rmig --help for more information.")]
+    NotFoundCommand(String),
     #[error("Creating DB pool error for url '{0}'.\nPlease check you parameters and try again.")]
     CreatingDatasourceError(String),
     #[error("Logging configuration return exit code. Please try again and set -d.\nError: {0}")]
