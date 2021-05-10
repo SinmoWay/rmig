@@ -220,7 +220,7 @@ impl AppRmigCli {
             self.status().await
         } else {
             Err(Error::NotFoundCommand("Command not found.".to_string()))
-        }
+        };
     }
 
     pub async fn status(&mut self) -> anyhow::Result<(), Error> {
@@ -393,7 +393,9 @@ impl AppRmigCli {
                         p.properties.insert(option.clone());
                     }
                 } else {
-                    p.properties.insert(props.clone().unwrap());
+                    if props.is_some() {
+                        p.properties.insert(props.clone().unwrap());
+                    }
                 }
                 DatasourceFactory::new(p).unwrap()
             }).collect::<Vec<Box<dyn Driver>>>()

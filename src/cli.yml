@@ -5,7 +5,7 @@ author: Sinmoway
 
 args:
   - logging_level:
-      help: Set logger level on Warn = 0 or DEBUG = 1 or TRACE = 2. Default level Info.
+      help: Set logger level on Warn/Trace/Debug/Info/Error. Default level Info.
       short: d
       long: debug
       multiple: false
