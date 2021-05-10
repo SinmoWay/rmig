@@ -1,10 +1,12 @@
 [package]
 name = "rmig"
 version = "0.1.0"
-authors = ["sinmo"]
+authors = ["SinmoWay"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+keywords = ["migration", "database", "cli"]
+categories = ["command-line-utilities", "database"]
+readme = "README.md"
 
 [dependencies]
 tokio = { version = "0.2", features = ["macros"] }
@@ -41,3 +43,9 @@ version = "1.0.0"
 [dependencies.sqlx]
 version = "0.5.1"
 features = ["runtime-async-std-native-tls", "default", "postgres", "chrono", "uuid"]
+
+[features]
+#default = ["postgres"]
+oracle = []
+postgres = []
+mysql = []

@@ -1,11 +1,16 @@
+#[cfg(any(
+feature = "oracle",
+feature = "postgres",
+feature = "mysql"
+))]
 use crate::configuration_properties::DatasourceProperties;
 use crate::changelogs::{Query, Migration};
-use crate::driver::postgres::DatasourcePostgres;
 use async_trait::async_trait;
 use std::collections::VecDeque;
 use crate::error::Error;
 
-mod postgres;
+#[cfg(feature = "postgres")]
+pub mod postgres;
 
 use crate::enum_str;
 
@@ -58,11 +63,23 @@ impl DatasourceFactory {
     pub fn new(props: &DatasourceProperties) -> anyhow::Result<Box<dyn Driver>, Error> {
         let url = props.full_url.as_ref().expect("Url for datasource is required.").to_string();
 
+        #[cfg(feature = "postgres")]
         if url.trim().starts_with("postgres") {
-            return Ok(Box::new(DatasourcePostgres::new(props)));
+            return Ok(Box::new(crate::driver::postgres::DatasourcePostgres::new(props)));
         }
 
-        Err(Error::ConnectionValidationError(format!("Driver by url {} not found.", url).to_owned()))
+        #[cfg(feature = "oracle")]
+        if url.trim().starts_with("oracle") {
+            panic!("Oracle driver no impl.");
+        }
+
+        #[cfg(feature = "mysql")]
+        if url.trim().starts_with("mysql") {
+            panic!("Mysql driver no impl.");
+        }
+
+        let _url = url::Url::parse(&*url).expect("Error while parsing url. Please verify and try again.").host_str().expect("Url is not valid. Empty url.").to_string();
+        Err(Error::ConnectionValidationError(format!("Driver by url {} not found.", &*_url).to_owned()))
     }
 }
 
@@ -91,6 +108,12 @@ mod test_local {
     #[test]
     pub fn parameter_name_eq() -> anyhow::Result<()> {
         assert_eq!("MaxPoolSize", DriverOptions::MaxPoolSize.name());
+        assert_eq!("MinPoolSize", DriverOptions::MinPoolSize.name());
+        assert_eq!("ConnectionTimeout", DriverOptions::ConnectionTimeout.name());
+        assert_eq!("MaxLifetime", DriverOptions::MaxLifetime.name());
+        assert_eq!("IldeTimeout", DriverOptions::IldeTimeout.name());
+        assert_eq!("AfterConnect", DriverOptions::AfterConnect.name());
+        assert_eq!("AfterConnectScript", DriverOptions::AfterConnectScript.name());
         Ok(())
     }
 }

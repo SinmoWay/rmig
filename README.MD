@@ -27,7 +27,7 @@ TODO
 
 ## Future and roadmap
 
-[Read on Wiki page](https://github.com/SinmoWay/rmig/wiki/Roadmap)
+[Read on Wiki page](https://github.com/SinmoWay/rmig/wiki/Roadmap#release-100)
 
 ## Support
 
@@ -44,7 +44,7 @@ rustup toolchain install nightly
 
 Second action, build project:
 ``
-cargo build
+cargo build --all-features
 ``
 
 For run test in all modules, use command:
