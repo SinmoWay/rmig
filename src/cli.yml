@@ -5,16 +5,10 @@ author: Sinmoway
 
 args:
   - logging_level:
-      help: Set logger level on DEBUG or TRACE (1/2).
+      help: Set logger level on WARN = 0 or DEBUG = 1 or TRACE = 2. Default level Info.
       short: d
       long: debug
       multiple: false
-      takes_value: true
-  - stage:
-      help: Stage name. Execution by order. Maybe multiply.
-      short: s
-      long: stages
-      multiple: true
       takes_value: true
   - properties:
       help: Properties for configuration and replacement (placeholders {{ you_placeholder }})
@@ -22,14 +16,45 @@ args:
       long: env
       multiple: true
       takes_value: true
-  - url:
-      help: Url for database
-      long: url
-      multiple: false
-      takes_value: true
-  - config:
-      help: Config file, supports yaml and json, see changelog.yml for more details. This env, override, and have high priority on\":\" --url, --env properties.
-      short: c
-      long: config
-      multiple: false
-      takes_value: true
+subcommands:
+  - status:
+      about: Status migration by changelog.
+      args:
+        - config:
+            short: c
+            multiple: false
+            long: config
+            help: Config file, supports yaml and json, see changelog.yml for more details. This env, override, and have high priority on\":\" --url, --env properties.
+            takes_value: true
+        - properties:
+            help: Properties for configuration and replacement (placeholders {{ you_placeholder }})
+            short: e
+            long: env
+            multiple: true
+            takes_value: true
+  - run:
+      about: Run migration by changelog.
+      args:
+        - config:
+            short: c
+            multiple: false
+            long: config
+            help: Config file, supports yaml and json, see changelog.yml for more details. This env, override, and have high priority on\":\" --url, --env properties.
+            takes_value: true
+        - properties:
+            help: Properties for configuration and replacement (placeholders {{ you_placeholder }})
+            short: e
+            long: env
+            multiple: true
+            takes_value: true
+        - url:
+            help: Url for database
+            long: url
+            multiple: false
+            takes_value: true
+        - stage:
+            help: Stage name. Execution by order. Maybe multiply.
+            short: s
+            long: stages
+            multiple: true
+            takes_value: true
