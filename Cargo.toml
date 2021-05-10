@@ -30,6 +30,8 @@ tera = "1.7.0"
 
 url = "2.2.1"
 
+r2d2-oracle = "0.5.0"
+
 [dependencies.clap]
 version = "3.0.0-beta.2"
 features = ["yaml", "color"]
@@ -45,7 +47,7 @@ version = "0.5.1"
 features = ["runtime-async-std-native-tls", "default", "postgres", "chrono", "uuid"]
 
 [features]
-#default = ["postgres"]
-oracle = []
+default = ["postgres"]
+ora = []
 postgres = []
 mysql = []
