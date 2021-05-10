@@ -30,6 +30,20 @@ TODO
 
 TODO
 
+## Build and testing
+
+To build the project, we use cargo and the toolchain version - nightly.
+
+``
+    cargo build
+``
+
+To run tests
+
+``
+    cargo test
+``
+
 ## License
 
 This project is licensed under the [MIT license](LICENSE).
