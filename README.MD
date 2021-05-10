@@ -6,12 +6,15 @@ Lightweight cross-platform data migration application.
 ![CI main branch][ci-main-badge]
 
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+
 [mit-url]: LICENSE
+
 [ci-main-badge]: https://github.com/SinmoWay/rmig/actions/workflows/rmig-build-and-test.yml/badge.svg?branch=main
 
 # Warning! The project is under development and code refactoring. Production use is not ready.
 
 ## Database Support
+
 * Postgres
 
 ## Usage
@@ -24,7 +27,7 @@ TODO
 
 ## Future and roadmap
 
-TODO
+[Read on Wiki page](https://github.com/SinmoWay/rmig/wiki/Roadmap)
 
 ## Support
 
@@ -34,14 +37,19 @@ TODO
 
 To build the project, we use cargo and the toolchain version - nightly.
 
+Firstly, we need install nightly toolchain:
 ``
-    cargo build
+rustup toolchain install nightly
 ``
 
-To run tests
-
+Second action, build project:
 ``
-    cargo test
+cargo build
+``
+
+For run test in all modules, use command:
+``
+cargo test
 ``
 
 ## License
@@ -50,6 +58,5 @@ This project is licensed under the [MIT license](LICENSE).
 
 ### Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in refinery by you, shall be licensed as MIT, without any additional
-terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in refinery by you, shall
+be licensed as MIT, without any additional terms or conditions.
