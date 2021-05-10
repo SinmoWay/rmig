@@ -10,21 +10,23 @@ edition = "2018"
 tokio = { version = "0.2", features = ["macros"] }
 async-trait = "0.1.42"
 futures = "0.3.13"
+
+serde_yaml = "0.8.17"
 serde_json = "1.0.61"
 serde = { version = "1.0.120", features = ["default", "derive"] }
-lazy_static = "1.4.0"
+
 thiserror = "1.0"
 anyhow = "1.0.40"
-serde_yaml = "0.8.17"
 # Pattern path
 glob = "0.3.0"
 # Hash generator
 md5 = "0.7.0"
+crc32fast = "1.2.1"
+
 # Template engine
 tera = "1.7.0"
+
 url = "2.2.1"
-gethostname = "0.2.1"
-crc32fast = "1.2.1"
 
 [dependencies.clap]
 version = "3.0.0-beta.2"

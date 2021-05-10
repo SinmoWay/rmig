@@ -252,9 +252,6 @@ impl AppRmigCli {
                                     }
                                     Err(e) => match e {
                                         // Ignoring other error's.
-                                        Error::EmptyConfiguration => {}
-                                        Error::ConfigurationConflict(_) => {}
-                                        Error::InheritConfigurationError(_) => {}
                                         Error::CreatingDatasourceError(_) => {}
                                         Error::LoggerConfigurationError(_) => {}
                                         Error::ParseError(_, _) => {}

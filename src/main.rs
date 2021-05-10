@@ -13,7 +13,6 @@ use crate::cli::{AppRmigCli};
 extern crate serde_yaml;
 extern crate log;
 extern crate log4rs;
-extern crate lazy_static;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

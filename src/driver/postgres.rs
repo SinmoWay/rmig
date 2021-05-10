@@ -73,9 +73,9 @@ impl Driver for DatasourcePostgres {
     }
 
     fn find_in_core_table(&self, name: String, hash: String) -> RmigEmptyResult {
-        let _schema = &self.schema_admin;
+        let schema = &self.schema_admin;
         let sep = &self.separator;
-        let sql = format!("select exists(select 1 from {}{}CHANGELOGS where FILENAME=$1) as erow, exists(select 1 from {}{}CHANGELOGS where FILENAME=$1 and HASH = $2) as erowhash", _schema, sep, _schema, sep);
+        let sql = format!("select exists(select 1 from {}{}CHANGELOGS where FILENAME=$1) as erow, exists(select 1 from {}{}CHANGELOGS where FILENAME=$1 and HASH = $2) as erowhash", schema, sep, schema, sep);
         // language=SQL
         let query: PgRow = block_on(sqlx::query(&*sql)
             .bind(&name)
@@ -101,7 +101,6 @@ impl Driver for DatasourcePostgres {
 
     fn check_rmig_core_table(&self) -> RmigEmptyResult {
         let sub_query = if self.schema_admin.ne("") { format!(" AND SCHEMANAME = '{}'", &*self.schema_admin) } else { "".to_string() };
-        // language=SQL
         let ex = block_on(sqlx::query(format!("SELECT EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'CHANGELOGS'{}) as ex", sub_query).as_str())
             // language=RUST
             .fetch_one(&*self.pool)).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
@@ -175,7 +174,6 @@ impl Driver for DatasourcePostgres {
     }
 
     async fn add_new_migration(&self, migration: Migration) -> RmigEmptyResult {
-        // language=SQL
         let _sql = format!("INSERT INTO {}{}CHANGELOGS(FILENAME, ORDER_ID, HASH) VALUES ($1,$2,$3);", &*self.schema_admin, &*self.separator);
         sqlx::query(&*_sql)
             .bind(&*migration.name)
