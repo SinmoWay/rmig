@@ -12,6 +12,14 @@ use crate::changelogs::{ChangelogRunner, Changelog, Directory};
 use futures::executor::block_on;
 use log::{info, error};
 use crate::error::Error;
+use crate::enum_str;
+
+enum_str! {
+ pub enum Command {
+    STATUS = 0x00000,
+    RUN = 0x00001,
+ }
+}
 
 #[derive(Clone, Debug)]
 pub struct Cli {

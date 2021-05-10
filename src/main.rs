@@ -6,6 +6,7 @@ mod changelogs;
 mod cli;
 mod driver;
 mod error;
+mod utils;
 
 use crate::cli::{AppRmigCli};
 

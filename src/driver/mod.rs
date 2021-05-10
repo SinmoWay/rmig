@@ -6,8 +6,8 @@ use std::collections::VecDeque;
 use crate::error::Error;
 
 mod postgres;
-#[macro_use]
-mod macro_utils;
+
+use crate::enum_str;
 
 pub type RmigEmptyResult = anyhow::Result<(), Error>;
 

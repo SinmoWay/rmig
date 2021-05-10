@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! enum_str {
     (pub enum $name:ident {
         $($variant:ident = $val:expr),*,
