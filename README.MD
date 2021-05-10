@@ -7,7 +7,7 @@ Lightweight cross-platform data migration application.
 
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: LICENSE
-[ci-main-badge]: https://github.com/SinmoWay/rmig/actions/workflows/rust-ubuntu.yml/badge.svg?branch=main
+[ci-main-badge]: https://github.com/SinmoWay/rmig/actions/workflows/rmig-build-and-test.yml/badge.svg?branch=main
 
 # Warning! The project is under development and code refactoring. Production use is not ready.
 
