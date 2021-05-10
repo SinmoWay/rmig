@@ -1,13 +1,12 @@
 use glob::glob;
-use crate::Error::IOError;
 use serde::{Serialize, Deserialize};
 use std::collections::{VecDeque, HashMap};
 use log::{debug, trace};
-use crate::Error;
 use crate::tera_manager::TeraManager;
 use std::path::PathBuf;
 use std::str::FromStr;
 use crate::driver::Driver;
+use crate::error::Error;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Changelogs {
@@ -153,7 +152,7 @@ impl<'a> ChangelogReader<'a> {
 
     pub fn read_directory(&self, mut dir: Directory) -> anyhow::Result<Directory, Error> {
         let paths = glob(&dir.name)
-            .map_err(|e| IOError(e.msg.to_owned()))?;
+            .map_err(|e| Error::IOError(e.msg.to_owned()))?;
         for path in paths {
             let path_buf = path.expect("Error while getting file path.");
             debug!("Including path's: {:?}", path_buf);
@@ -197,6 +196,7 @@ impl<'a> ChangelogReader<'a> {
 
         let hash = format!("{:x}", md5::compute(&sql));
         let name_separate = name.trim().split(".").collect::<Vec<&str>>();
+        // TODO: Add order to version or remove.
         let mut order = 0i64;
         // Extension .sql/.any
         if name_separate.len() > 1 {

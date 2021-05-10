@@ -1,5 +1,0 @@
-changelogs:
-  - name: Initialize
-    directory: ./
-    author: Mosin-AV
-    order: 1

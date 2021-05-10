@@ -3,7 +3,6 @@ use crate::configuration_properties::{DatasourceProperties, DatasourcesPropertie
 use std::borrow::Borrow;
 use log::LevelFilter;
 use std::collections::{HashMap};
-use crate::Error;
 use log4rs::config::{Root, Appender};
 use log4rs::{Config, Handle};
 use log4rs::append::console::{ConsoleAppender, Target};
@@ -12,6 +11,7 @@ use crate::tera_manager::TeraManager;
 use crate::changelogs::{ChangelogRunner, Changelog, Directory};
 use futures::executor::block_on;
 use log::{info, error};
+use crate::error::Error;
 
 #[derive(Clone, Debug)]
 pub struct Cli {

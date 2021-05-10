@@ -1,9 +1,9 @@
 use crate::configuration_properties::DatasourceProperties;
-use crate::Error;
 use crate::changelogs::{Query, Migration};
 use crate::driver::postgres::DatasourcePostgres;
 use async_trait::async_trait;
 use std::collections::VecDeque;
+use crate::error::Error;
 
 mod postgres;
 #[macro_use]

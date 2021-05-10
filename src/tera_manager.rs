@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use tera::{Context, Tera};
 use log::warn;
-use crate::Error;
+use crate::error::Error;
 
 pub struct TeraManager {
     pub(crate) env: HashMap<String, String>,
