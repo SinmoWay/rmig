@@ -70,7 +70,7 @@ impl DatasourceFactory {
             return Ok(Box::new(crate::driver::postgres::DatasourcePostgres::new(props)));
         }
 
-        #[cfg(feature = "oracle")]
+        #[cfg(feature = "ora")]
         if url.trim().starts_with("oracle") {
             panic!("Oracle driver no impl.");
         }
