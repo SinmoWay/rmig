@@ -1,5 +1,5 @@
 #[cfg(any(
-feature = "oracle",
+feature = "ora",
 feature = "postgres",
 feature = "mysql"
 ))]
@@ -11,6 +11,8 @@ use crate::error::Error;
 
 #[cfg(feature = "postgres")]
 pub mod postgres;
+#[cfg(feature = "ora")]
+pub mod oracle;
 
 use crate::enum_str;
 

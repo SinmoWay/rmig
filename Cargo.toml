@@ -1,6 +1,6 @@
 [package]
 name = "rmig"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["SinmoWay"]
 edition = "2018"
 license = "MIT"
@@ -47,7 +47,7 @@ version = "0.5.1"
 features = ["runtime-async-std-native-tls", "default", "postgres", "chrono", "uuid"]
 
 [features]
-default = ["postgres"]
+default = ["postgres", "ora"]
 ora = []
 postgres = []
 mysql = []
