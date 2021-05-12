@@ -17,13 +17,24 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest, macOS-latest ]
         rust: [ nightly ]
+        features: [ postgres ]
 
     steps:
-    - uses: hecrj/setup-rust-action@v1
-      with:
-        rust-version: ${{ matrix.rust }}
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose --all-features
-    - name: Run tests
-      run: cargo test --verbose --all-features
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: ${{ matrix.rust }}
+      - uses: actions/checkout@v2
+      - name: Build
+        run: cargo build --verbose --default
+      - name: Run unit tests
+        run: cargo test --all --default --verbose
+# Add job for run oracle test. Need cache result's...
+#      - name: Install oracle
+#        if: ${{ matrix.os == 'ubuntu-latest'}}
+#        uses: GoodManWENNumber2/oracle-11g-server-action@v1.0
+#        with:
+#          host port: 1521
+#          oracle version: '1.0.0'
+#      - name: Run oracle test
+#        if: ${{ matrix.os == 'ubuntu-latest'}}
+#        run: cargo build --verbose --features default,oracle-test

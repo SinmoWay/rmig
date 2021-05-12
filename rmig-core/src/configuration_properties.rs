@@ -16,18 +16,6 @@ pub struct DatasourceProperties {
     pub properties: Option<HashMap<String, String>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CmdArg {
-    pub name: String,
-    pub about: String,
-    pub short: Option<String>,
-    pub long: String,
-    pub takes: Option<bool>,
-    pub multiply: Option<bool>,
-    pub default: Option<String>,
-    pub conflict_on: Option<String>,
-}
-
 impl DatasourceProperties {
     pub fn new(name: Option<String>, _url: String, properties: Option<HashMap<String, String>>) -> Self {
         DatasourceProperties {name, properties, full_url: Some(_url) }

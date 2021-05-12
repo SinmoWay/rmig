@@ -1,18 +1,13 @@
 [package]
-name = "rmig"
-version = "1.0.0"
-authors = ["SinmoWay"]
+name = "rmig-core"
+version = "0.1.0"
+authors = ["sinmoway <sinmoway@gmail.com>"]
 edition = "2018"
-license = "MIT"
-keywords = ["migration", "database", "cli"]
-categories = ["command-line-utilities", "database"]
-readme = "README.md"
 
-[workspace]
-members = ["rmig-core", "test-integartion"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "0.2", features = ["macros"] }
+# Template engine
 async-trait = "0.1.42"
 futures = "0.3.13"
 
@@ -48,9 +43,6 @@ version = "1.0.0"
 [dependencies.sqlx]
 version = "0.5.1"
 features = ["runtime-async-std-native-tls", "default", "postgres", "chrono", "uuid"]
-
-[dependencies.rmig-core]
-path = "rmig-core"
 
 [features]
 default = ["postgres", "ora", "mysql"]

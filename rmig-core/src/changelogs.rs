@@ -311,7 +311,7 @@ impl<'a> ChangelogRunner<'a> {
     }
 }
 
-/// TODO: Need normal tests
+/// TODO: Write tests
 #[cfg(test)]
 mod local_test {
     use crate::changelogs::{QueryOptions, ChangelogRunner};
@@ -324,54 +324,4 @@ mod local_test {
         Ok(())
     }
 
-    #[test]
-    pub fn test_serialize_query_opts_by_str() -> anyhow::Result<()> {
-        let opts_str = "{\"run_always\":true}";
-        let opts: QueryOptions = serde_json::from_str(opts_str)?;
-        println!("QueryOptions: run -> {}, run_always -> {}", opts.has_run.as_ref().unwrap_or(&false), opts.run_always.as_ref().unwrap_or(&false));
-        assert_eq!(true, opts.run_always.unwrap());
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_with_file() -> anyhow::Result<()> {
-        let txt = include_str!("../src/examples/init/2.init_with_opts.sql").replace("--rmig--", "");
-        let opts_str = txt.lines().collect::<Vec<&str>>();
-        let f_l = opts_str[0];
-        let s_l = opts_str[1];
-        let s_n = opts_str[2];
-        let mut opts: QueryOptions = serde_json::from_str(f_l)?;
-        println!("QueryOptions: run -> {}, run_always -> {}", opts.has_run.as_ref().unwrap_or(&false), opts.run_always.as_ref().unwrap_or(&false));
-        assert_eq!(true, opts.run_always.unwrap());
-        assert_eq!(false, opts.has_run.unwrap_or(false));
-        opts = serde_json::from_str(s_l)?;
-        println!("QueryOptions: run -> {}, run_always -> {}", opts.has_run.as_ref().unwrap_or(&false), opts.run_always.as_ref().unwrap_or(&false));
-        assert_eq!(false, opts.run_always.unwrap_or(false));
-        assert_eq!(false, opts.has_run.unwrap_or(false));
-        opts = serde_json::from_str(s_n)?;
-        println!("QueryOptions: run -> {}, run_always -> {}, global: -> {}", opts.has_run.as_ref().unwrap_or(&false), opts.run_always.as_ref().unwrap_or(&false), opts.global.as_ref().unwrap_or(&false));
-        assert_eq!(true, opts.run_always.unwrap_or(false));
-        assert_eq!(false, opts.has_run.unwrap_or(false));
-        assert_eq!(true, opts.global.unwrap_or(false));
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_glob() -> anyhow::Result<()> {
-        for entry in glob::glob("./src/examples/init/**/*")? {
-            println!("{}", entry?.display());
-        };
-        Ok(())
-    }
-
-    #[test]
-    pub fn test_runner() -> anyhow::Result<()> {
-        let mut map = HashMap::<String, String>::new();
-        map.insert("password".to_string(), "123456".to_string());
-        map.insert("schema_name".to_string(), "123456".to_string());
-        map.insert("SCHEMA_ADMIN".to_string(), "123456".to_string());
-        let reader = ChangelogRunner::new_from_file("./src/examples/changelog.yml".to_string(), vec![], Some(map));
-        println!("{:?}", reader.changelog);
-        Ok(())
-    }
 }

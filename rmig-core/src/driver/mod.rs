@@ -72,6 +72,7 @@ impl DatasourceFactory {
 
         #[cfg(feature = "ora")]
         if url.trim().starts_with("oracle") {
+            // return Ok(Box::new(crate::driver::oracle::DatasourceOracle::new(props)));
             panic!("Oracle driver no impl.");
         }
 
