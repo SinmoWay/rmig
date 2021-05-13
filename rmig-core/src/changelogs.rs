@@ -131,7 +131,7 @@ impl<'a> ChangelogReader<'a> {
 
 
         if self.params.as_ref().is_some() {
-            yaml = TeraManager::new(self.params.as_ref().unwrap().clone()).apply("changelogs.yml", yaml.as_str())?.to_string();
+            yaml = TeraManager::new(self.params.as_ref().unwrap().clone()).apply("changelogs.yml", yaml.as_str())?;
         }
 
         let mut changelogs: Changelogs = serde_yaml::from_str(yaml.as_str())
@@ -191,11 +191,11 @@ impl<'a> ChangelogReader<'a> {
             .to_string();
 
         if self.params.as_ref().is_some() {
-            sql = TeraManager::new(self.params.as_ref().unwrap().clone()).apply(&*name, sql.as_str())?.to_string();
+            sql = TeraManager::new(self.params.as_ref().unwrap().clone()).apply(&*name, sql.as_str())?;
         }
 
         let hash = format!("{:x}", md5::compute(&sql));
-        let name_separate = name.trim().split(".").collect::<Vec<&str>>();
+        let name_separate = name.trim().split('.').collect::<Vec<&str>>();
         // TODO: Add order to version or remove.
         let mut order = 0i64;
         // Extension .sql/.any
@@ -246,7 +246,7 @@ impl<'a> ChangelogReader<'a> {
             let lines = text.lines().collect::<Vec<&str>>();
 
             let sum = lines.len() as u8;
-            if &sum > &1u8 {
+            if sum > 1u8 {
                 let opts_str = lines[0].replace("--rmig--", "");
                 // TODO: Посмотреть по коду что-то тут не так.
                 opts = Some(serde_json::from_str(opts_str.as_str())
@@ -261,15 +261,15 @@ impl<'a> ChangelogReader<'a> {
         let opts: Option<QueryOptions> = self.read_options(&*query)?;
 
         if opts.as_ref().is_some() {
-            let without_option_line = query.lines().skip(1).collect::<Vec<&str>>().join("\n").to_string();
+            let without_option_line = query.lines().skip(1).collect::<Vec<&str>>().join("\n");
             Ok(Query {
                 query: without_option_line,
-                opts: opts.unwrap_or(QueryOptions::default()),
+                opts: opts.unwrap_or_default(),
             })
         } else {
             Ok(Query {
                 query,
-                opts: opts.unwrap_or(QueryOptions::default()),
+                opts: opts.unwrap_or_default(),
             })
         }
     }
@@ -287,12 +287,12 @@ impl<'a> ChangelogRunner<'a> {
                          properties: Option<HashMap<String, String>>) -> Self {
         let changelog_reader = properties.as_ref()
             .and_then(|p| p.get("query_separator"))
-            .and_then(|path| Some(ChangelogReader::new(path.as_str())))
-            .unwrap_or(ChangelogReader::default());
+            .map(|path| ChangelogReader::new(path.as_str()))
+            .unwrap_or_default();
         ChangelogRunner {
             changelog: changelog_reader
                 .read_changelog_with_env(changelog_path.to_owned(), properties.clone())
-                .expect(format!("Error while reading changelog with name {}", changelog_path.as_str()).as_str()),
+                .unwrap_or_else(|e| panic!("Error while reading changelog with name {}", &*changelog_path)),
             datasources,
             properties,
         }
@@ -323,5 +323,4 @@ mod local_test {
         assert_eq!("5eb63bbbe01eeed093cb22bb8f5acdc3", md5);
         Ok(())
     }
-
 }

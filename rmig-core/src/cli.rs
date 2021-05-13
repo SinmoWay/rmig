@@ -17,8 +17,8 @@ use std::str::FromStr;
 
 enum_str! {
  pub enum Command {
-    STATUS = 0x00000,
-    RUN = 0x00001,
+    Status = 0x00000,
+    Run = 0x00001,
  }
 }
 
@@ -27,10 +27,10 @@ impl FromStr for Command {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let command = s.to_lowercase();
-        return if Command::STATUS.name().to_lowercase().eq(command.as_str()) {
-            Ok(Command::STATUS)
+        return if Command::Status.name().to_lowercase().eq(command.as_str()) {
+            Ok(Command::Status)
         } else {
-            Ok(Command::RUN)
+            Ok(Command::Run)
         };
         // Err(Error::NotFoundCommand(s.to_string()))
     }
@@ -131,8 +131,8 @@ impl CliReader {
     /// Read properties [--url]
     pub fn read_url(mut self) -> CliReader {
         if let Some(c) = self.args.command.as_ref() {
-            if Command::RUN == c.clone() {
-                if let Some(m) = self.args_match.subcommand_matches(Command::RUN.name().to_lowercase()) {
+            if Command::Run == c.clone() {
+                if let Some(m) = self.args_match.subcommand_matches(Command::Run.name().to_lowercase()) {
                     m.value_of("url").map(|arg| String::from(arg)).map(|arg| self.args.url.insert(arg));
                 }
             }
@@ -143,8 +143,8 @@ impl CliReader {
     /// Read properties [--stage/-s]
     pub fn read_stage(mut self) -> CliReader {
         if let Some(c) = self.args.command.as_ref() {
-            if Command::RUN == c.clone() {
-                if let Some(m) = self.args_match.subcommand_matches(Command::RUN.name().to_lowercase()) {
+            if Command::Run == c.clone() {
+                if let Some(m) = self.args_match.subcommand_matches(Command::Run.name().to_lowercase()) {
                     let stage = m.values_of("stage")
                         .map(|value| value.into_iter().map(|v| String::from(v)).collect::<Vec<String>>());
                     self.args.stage = stage;
@@ -214,9 +214,9 @@ impl AppRmigCli {
 
     pub async fn execute(&mut self) -> anyhow::Result<(), Error> {
         let command = self.args.command.as_ref().unwrap();
-        return if Command::RUN == *command {
+        return if Command::Run == *command {
             self.run().await
-        } else if Command::STATUS == *command {
+        } else if Command::Status == *command {
             self.status().await
         } else {
             Err(Error::NotFoundCommand("Command not found.".to_string()))
@@ -349,9 +349,9 @@ impl AppRmigCli {
             // This means you can change the default log level to trace
             // if you are trying to debug an issue and need more logs on then turn it off
             // once you are done.
-            Ok(log4rs::init_config(config).map_err(|e| Error::LoggerConfigurationError(e.to_string()))?)
+            log4rs::init_config(config).map_err(|e| Error::LoggerConfigurationError(e.to_string()))
         }
-        let level_filter = self.args.logging_level.unwrap_or(LevelFilter::Info).clone();
+        let level_filter = self.args.logging_level.unwrap_or(LevelFilter::Info);
         self.logging_handler.insert(_logging_level(level_filter).expect("Logging level is not known."));
         self
     }
@@ -375,7 +375,7 @@ impl AppRmigCli {
             let mut yaml = std::fs::read_to_string(path.as_str()).map_err(|e| Error::IOError(e.to_string()))?;
 
             if properties.as_ref().is_some() {
-                yaml = TeraManager::new(properties.as_ref().unwrap().clone()).apply("changelogs.yml", yaml.as_str())?.to_string();
+                yaml = TeraManager::new(properties.as_ref().unwrap().clone()).apply("changelogs.yml", yaml.as_str())?;
             }
 
             let datasources: DatasourcesProperties = serde_yaml::from_str(yaml.as_str())
