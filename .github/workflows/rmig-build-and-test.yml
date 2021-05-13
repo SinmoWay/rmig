@@ -25,9 +25,9 @@ jobs:
           rust-version: ${{ matrix.rust }}
       - uses: actions/checkout@v2
       - name: Build
-        run: cargo build --verbose --default
+        run: cargo build --verbose
       - name: Run unit tests
-        run: cargo test --all --default --verbose
+        run: cargo test --all --verbose
 # Add job for run oracle test. Need cache result's...
 #      - name: Install oracle
 #        if: ${{ matrix.os == 'ubuntu-latest'}}

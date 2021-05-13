@@ -13,41 +13,7 @@ members = ["rmig-core", "test-integartion"]
 
 [dependencies]
 tokio = { version = "0.2", features = ["macros"] }
-async-trait = "0.1.42"
-futures = "0.3.13"
-
-serde_yaml = "0.8.17"
-serde_json = "1.0.61"
-serde = { version = "1.0.120", features = ["default", "derive"] }
-
-thiserror = "1.0"
 anyhow = "1.0.40"
-# Pattern path
-glob = "0.3.0"
-# Hash generator
-md5 = "0.7.0"
-crc32fast = "1.2.1"
-
-# Template engine
-tera = "1.7.0"
-
-url = "2.2.1"
-
-r2d2-oracle = "0.5.0"
-
-[dependencies.clap]
-version = "3.0.0-beta.2"
-features = ["yaml", "color"]
-
-[dependencies.log]
-version = "0.4.14"
-
-[dependencies.log4rs]
-version = "1.0.0"
-
-[dependencies.sqlx]
-version = "0.5.1"
-features = ["runtime-async-std-native-tls", "default", "postgres", "chrono", "uuid"]
 
 [dependencies.rmig-core]
 path = "rmig-core"
