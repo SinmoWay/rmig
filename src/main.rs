@@ -1,4 +1,3 @@
-#![feature(option_insert)]
 
 use rmig_core::cli::{AppRmigCli};
 

@@ -1,8 +1,3 @@
-#[cfg(any(
-feature = "ora",
-feature = "postgres",
-feature = "mysql"
-))]
 use crate::configuration_properties::DatasourceProperties;
 use crate::changelogs::{Query, Migration};
 use async_trait::async_trait;
@@ -81,7 +76,7 @@ impl DatasourceFactory {
             panic!("Mysql driver no impl.");
         }
 
-        let _url = url::Url::parse(&*url).expect("Error while parsing url. Please verify and try again.").host_str().expect("Url is not valid. Empty url.").to_string();
+        let _url = url::Url::parse(&*url).expect("Error while parsing url. Please verify and try again.").host_str().expect("Url is not valid. Empty host.").to_string();
         Err(Error::ConnectionValidationError(format!("Driver by url {} not found.", &*_url).to_owned()))
     }
 }

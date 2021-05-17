@@ -10,6 +10,7 @@ readme = "README.md"
 
 [workspace]
 members = ["rmig-core", "test-integartion"]
+default-members = ["rmig-core"]
 
 [dependencies]
 tokio = { version = "0.2", features = ["macros"] }

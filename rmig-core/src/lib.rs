@@ -1,4 +1,3 @@
-#![feature(option_insert)]
 
 pub mod utils;
 pub mod driver;
