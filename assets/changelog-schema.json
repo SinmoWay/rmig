@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Changelog configuration file",
+  "description": "RMIG configuration file. Find additional information in https://github.com/SinmoWay/rmig.",
+  "type": "object",
+  "properties": {
+    "changelogs": {
+      "items": {
+        "$ref": "#/$defs/changelog"
+      },
+      "description": "Changelog list",
+      "type": "array"
+    },
+    "datasources": {
+      "items": {
+        "$ref": "#/$defs/datasource"
+      },
+      "description": "Datasoruce list. Any command/stage будет выполнена на каждой бд.",
+      "type": "array"
+    },
+    "properties": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "changelogs"
+  ],
+  "$defs": {
+    "changelog": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Stage name."
+        },
+        "directory": {
+          "type": "string",
+          "description": "Directory path. Includes patterns."
+        },
+        "author": {
+          "type": "string",
+          "description": "Author name, optional parameter."
+        },
+        "order": {
+          "type": "number",
+          "description": "Order execute, optional parameter."
+        },
+        "required": [
+          "name",
+          "directory"
+        ]
+      },
+      "type": "object"
+    },
+    "datasource": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Datasource name"
+        },
+        "url": {
+          "type": "string",
+          "description": "Full url to datasource."
+        },
+        "properties": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "url"
+      ]
+    }
+  }
+}
