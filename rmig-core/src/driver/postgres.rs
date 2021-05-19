@@ -195,9 +195,9 @@ async fn current_database(pool: &PgPool) -> anyhow::Result<String, Error> {
 impl Drop for DatasourcePostgres {
     fn drop(&mut self) {
         info!("Unlocking session.");
-        self.unlock().unwrap_or_else(|_e| {
+        block_on(self.unlock().unwrap_or_else(|_e| {
             error!("Unlocking session return error code.");
-        });
+        }));
         info!("Closing pool {}", &self.get_name());
         self.close()
     }

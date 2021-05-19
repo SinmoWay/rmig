@@ -23,19 +23,24 @@ impl DriverFactory<DatasourceOracle> for DatasourceOracle {
         // TODO: Create method from_str (impl trait)
 
         let url = props.full_url.as_ref().expect("Url for datasource is required.").as_str();
-        let _url = url::Url::parse(&*url).map_err(|_e| Error::CreatingDatasourceError("Url is not valid. Check your configuration and url parameters.".to_string())).unwrap();
+        let _url = url::Url::parse(&*url)
+            .map_err(|_e| Error::CreatingDatasourceError("Url is not valid. Check your configuration and url parameters.".to_string()))
+            .unwrap();
 
         let host = _url.host_str().expect("Not found hostname.").to_owned();
         let port = _url.port().expect("Port required").to_owned().to_string();
 
-        let schema_admin = props.properties.as_ref().unwrap_or(HashMap::<String, String>::new().borrow()).get("SCHEMA_ADMIN").unwrap_or(&"".to_string()).to_string();
+        let schema_admin = props.properties.as_ref()
+            .unwrap_or(HashMap::<String, String>::new().borrow())
+            .get("SCHEMA_ADMIN")
+            .unwrap_or(&"".to_string())
+            .to_string();
 
         let mut separator = "";
         if !schema_admin.is_empty() {
             separator = ".";
         }
-        // TODO: Required?
-        let password = _url.password().expect("Expected password").to_owned();
+        let password = _url.password().unwrap_or_default().to_owned();
         let user = _url.username().to_owned();
         let path = _url.path().trim_start_matches('/');
 

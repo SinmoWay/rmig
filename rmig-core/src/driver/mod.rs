@@ -8,6 +8,8 @@ use crate::error::Error;
 pub mod postgres;
 #[cfg(feature = "ora")]
 pub mod oracle;
+#[cfg(feature = "mysql")]
+pub mod mysql;
 
 use crate::enum_str;
 

@@ -13,8 +13,7 @@ impl TeraManager {
     }
 
     pub fn apply(self, name: &str, value: &str) -> anyhow::Result<String, Error> {
-        let mut ctx = Context::new();
-        ctx = self.apply_context(ctx);
+        let ctx = Context::from_serialize(self.env).unwrap();
         let mut tera = Tera::default();
         tera.add_raw_template(name, value).map_err(|e| Error::ParseError(name.to_owned(), e.to_string()))?;
         tera.render(name, &ctx)
@@ -23,19 +22,14 @@ impl TeraManager {
                 Error::ParseError(name.to_owned(), format!("{:?}", e))
             })
     }
-
-    fn apply_context(self, mut ctx: Context) -> Context {
-        &self.env.iter().for_each(|kv| {
-            ctx.insert(kv.0, kv.1)
-        });
-        ctx
-    }
 }
 
 #[cfg(test)]
 mod local_test {
+    extern crate test;
     use std::collections::HashMap;
     use crate::tera_manager::TeraManager;
+    use test::Bencher;
 
     #[test]
     fn test_tera_manager() -> anyhow::Result<()> {

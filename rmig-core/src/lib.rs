@@ -1,3 +1,4 @@
+#![feature(test)]
 
 pub mod utils;
 pub mod driver;

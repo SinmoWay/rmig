@@ -1,0 +1,19 @@
+version: "3.9"
+
+# Service's Mysql/Oracle/Postgres
+services:
+  oracle:
+    image: oracle/database:12.1.0.2-ee
+    restart: always
+    ports:
+      - 1521:1521
+      - 8080:8080
+      - 5500:5500
+  mysql:
+    image: mysql:latest
+    restart: always
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
