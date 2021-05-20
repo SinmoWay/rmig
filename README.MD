@@ -39,11 +39,11 @@ TODO
 
 ### Configuration file's
 
-For the description of the changelog, we use yml files. In the future, we will also support json. In case you want additional support from your IDE, import rmig-changelog-spec.json from the assets directory.
+For the description of the changelog, we use yml files. In the future, we will also support json. In case you want additional support from your IDE, import `rmig-changelog-spec.json` from the `assets` directory.
 
 ### Changelog table
 
-Changelog tables are described in the core module. There is also support for creating a table not in the root element, for this it is enough to declare env or properties with the name SCHEMA_ADMIN. For an introduction, see the postgres table creation file: `rmig-core/src/init/pg_init.sql`.
+Changelog tables are described in the core module. There is also support for creating a table not in the root element, for this it is enough to declare env or properties with the name `SCHEMA_ADMIN`. For an introduction, see the postgres table creation file: `rmig-core/src/init/pg_init.sql`.
 
 ### Сhangelog locking mechanism 
 
