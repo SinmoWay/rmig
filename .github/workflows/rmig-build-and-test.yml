@@ -2,9 +2,9 @@ name: Build and testing
 
 on:
   push:
-    branches: [ main, realase-* ]
+    branches: [ main, realase-*, dependabot/cargo/* ]
   pull_request:
-    branches: [ main, realase-* ]
+    branches: [ main, realase-*, dependabot/cargo/* ]
 
 env:
   CARGO_TERM_COLOR: always

@@ -19,21 +19,75 @@ Lightweight cross-platform data migration application.
 * MySQL
 * Oracle
 
+## The problems we are trying to solve
+To begin with, I would like to describe the problems that I would like to solve.
+First, standard libraries significantly complicate a relatively simple process such as data migration. If you live in a microservice structure, you should understand what it is like to have a database in each service. And in large services, we can face thousands of migrations and enter each of them in the changelog ... This is really a pain. And here is my first goal: to create the most laconic changelog. At the moment I got to this:
+```
+changelogs:
+  - name: Initialize
+    directory: ./src/examples/init/*
+  - name: Drop
+    directory: ./drop/**
+```
+We support both direct links to files or directories and wildcard. We are not asking you to describe any additional parameters, we will only need ... The stage - `name` and the path to the directory.
+Secondly, quite often there is a situation that after the dev environment, it is necessary to roll out migrations at several additional stands. And what should be done? We manually or someone automatically runs it through scripts. All this takes time. And here's the second goal: to be able to run migrations on several databases, while doing it in parallel (currently in the process of implementation).
+By convention, the most advanced changelog should look something like this:
+```
+changelogs:
+  - name: Initialize
+    directory: ./migration/init/**
+  - name: Drop
+    directory: ./migration/drop/**
+
+properties:
+  key: value
+  hello: wolrd
+  admin_schema: "{{ schema_name }}"
+
+datasources:
+  - name: test1
+    url: test
+    properties:
+      blob: no
+  - name: test2
+    url: test
+    ...
+```
+At the same time, no one forbids you to template both changelog and migration. We use tera template engine for such purposes.
+
 ## Usage
 
-TODO
+### General
+First, you need to create a changelog, it must follow the rmig-changelog-spec.json schema. You can also reorganize your migrations or changelog (if the project is new), and use the engine template [Tera](https://github.com/Keats/tera).
+Next, you can describe the DB or your configuration in your changelog or use the command line for this.
 
-## Migration version
+### Cli commands
+General configuration flags and parameters:
+```
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
 
+OPTIONS:
+    -c, --config <config>          Config file, supports yaml and json, see changelog.yml for more details. This env, override, and have high priority on\":\" --url, --env properties.
+    -d, --debug <logging_level>    Set logger level on Warn/Trace/Debug/Info/Error. Default level Info.
+    -e, --env <properties>...      Properties for configuration and replacement (placeholders {{ you_placeholder }})
+```
+
+#### Run migration
+To start migrations, you need to write the command `rmig run -с changelog1 -c changelog2 ...` for more information use --help.
+```
+OPTIONS:
+    -s, --stages <stage>...    Stage name. Execution by order. Maybe multiply.
+        --url <url>            Url for database
+```
+
+#### Status migration
 TODO
 
 ## Future and roadmap
 
 [Read on Wiki page](https://github.com/SinmoWay/rmig/wiki/Roadmap#release-100)
-
-## Support
-
-TODO
 
 ## Changelog specification.
 
