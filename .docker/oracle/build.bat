@@ -1,31 +1,10 @@
-@echo off
-set DIR=%~1
+SET VERSION=%~1
+SET DOCKERFILE==%2
 
-rem See https://www.oracle.com/database/technologies/xe-downloads.html, if need another version.
-set ORACLE_FILE=oracle-database-xe-18c-1.0-1.x86_64.rpm
-set SINGLE_INSTANCE_REPO=https://github.com/oracle/docker-images/archive/refs/heads/main.zip
-set DEFAULT_ORACLE=https://edelivery.oracle.com/otn-pub/otn_software/db-express/%ORACLE_FILE%
-set GIT_SUB_DIR=OracleDatabase\SingleInstance\dockerfiles
+IF "%VERSION%" == "" ( SET VERSION=18.4.0)
 
-if "%DIR%"=="" ( set DIR=. )
+IF "%VERSION%"=="18.4.0" ( SET DOCKERFILE=.\18.4.0\Dockerfile)
 
-set "rpm=dir %DIR% | findstr %ORACLE_FILE%"
+call docker build --force-rm=true --no-cache=true -t oracle/database:%VERSION% -f %DOCKERFILE% .\%VERSION%\
 
-FOR /F %%i IN ('%%rpm%%') DO set EX=%i
 
-if "%EX%" == "" (
-    echo Download oracle server.
-    rem choco install wget
-    call wget.exe -v -P %DIR% %DEFAULT_ORACLE%
-)
-
-if NOT EXIST %DIR%\docker-images-main\ (
-    call wget.exe -v -P %DIR% %SINGLE_INSTANCE_REPO%
-    echo Unzip files
-    call tar.exe -xf %DIR%\main.zip -C %DIR%\
-)
-
-IF EXIST %DIR%\docker-images-main\ (
-    echo Start building docker file.
-    call cp %DIR%
-)

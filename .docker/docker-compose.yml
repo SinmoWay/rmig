@@ -2,18 +2,44 @@ version: "3.9"
 
 # Service's Mysql/Oracle/Postgres
 services:
-  oracle:
-    image: oracle/database:12.1.0.2-ee
+
+  oracle-18.4.0:
+    image: oracle/database:18.4.0
     restart: always
     ports:
       - 1521:1521
       - 8080:8080
       - 5500:5500
+    volumes:
+      - ora_volume:/opt/oracle/oradata
+
   mysql:
     image: mysql:latest
     restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+      - mysql_volume:/var/lib/mysql
+
   postgres:
     image: postgres:latest
     restart: always
+    ports:
+      - 5432:5432
     environment:
       POSTGRES_PASSWORD: example
+    volumes:
+      - pg_volume:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+
+volumes:
+  pg_volume:
+  ora_volume:
+  mysql_volume:
