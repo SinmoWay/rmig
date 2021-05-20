@@ -25,7 +25,7 @@ First, standard libraries significantly complicate a relatively simple process s
 ```
 changelogs:
   - name: Initialize
-    directory: ./src/examples/init/*
+    directory: ./migration/init/**
   - name: Drop
     directory: ./drop/**
 ```
