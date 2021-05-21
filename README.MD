@@ -58,8 +58,46 @@ At the same time, no one forbids you to template both changelog and migration. W
 ## Usage
 
 ### General
-First, you need to create a changelog, it must follow the rmig-changelog-spec.json schema. You can also reorganize your migrations or changelog (if the project is new), and use the engine template [Tera](https://github.com/Keats/tera).
+First, you need to create a changelog, it must follow the `rmig-changelog-spec.json` schema. You can also reorganize your migrations or changelog (if the project is new), and use the engine template [Tera](https://github.com/Keats/tera).
 Next, you can describe the DB or your configuration in your changelog or use the command line for this.
+
+### Naming rules for migrations
+There is only one rule, use the naming order for migrations. The general pattern is: `ORDER.your file name with extension`. Thus, the order specifies the order of performing migrations in the directory.
+
+#### Special cases
+Consider this situation:
+```
+--- migration <- FOLDER
+    | --- 1.user_folder <- FOLDER
+        | --- 1.....sql
+        | --- n.....sql
+    | --- 2.any_folder <- FOLDER
+        | --- 1.....sql
+        | --- n.....sql
+    | --- 1.init.sql
+    | --- 2.create_dummy.sql
+    | --- 3.create_hello.sql        
+--- changelog.yml
+```
+... and changelog
+```
+changelogs:
+  - name: Initialize
+    directory: ./migration/**
+datasources:
+  - name: my_best_datasource
+    url: {{ DB }}    
+```
+After that, let's call `rmig run -с changelog.yml -s Initialize -e DB=My_Datasource_Full_Url`. 
+
+The question arises: what is the sequence of the call? If we describe the sequence of the call, then it will be something like this:
+* We start reading recursively each folder and add any file to the end of the list.
+* If we come across a directory, then first we read the files in the directory itself, and only after that we read the files in the sub directories.  
+Accordingly, first we will read the files `1.init.sql`, `2.create_dummy.sql`, `3.create_hello.sql`, and add them to the list. Next, we will face the first directory `1.user_folder`
+and start reading it recursively (by analogy with the beginning), and after `2.any_folder`.
+  
+We must understand that when reading files/directories, we also resolve all templates inside. Also, the `ORDER` value cannot be less than zero.
+
 
 ### Cli commands
 General configuration flags and parameters:
@@ -112,7 +150,7 @@ The locking mechanism depends entirely on the type of driver. We are trying to d
             .await.map_err(|e| Error::SQLError(format!("{:?}", e)))?;
 --------------------------------            
 ```
-For oracle, we will use DBMS_LOCK package, for MySQL - GET_LOCK.
+For oracle, we will use `DBMS_LOCK` package, for MySQL - `GET_LOCK`.
 
 
 The lock is generated based on the migration object (schema name or database name), for example:
