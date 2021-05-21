@@ -13,7 +13,7 @@ members = ["rmig-core", "test-integartion"]
 default-members = ["rmig-core"]
 
 [dependencies]
-tokio = { version = "0.2", features = ["macros"] }
+tokio = { version = "1.6", features = ["macros", "rt-multi-thread"] }
 anyhow = "1.0.40"
 
 [dependencies.rmig-core]
