@@ -3,9 +3,6 @@ changelogs:
     directory: ./src/examples/init/*
     author: Mosin-AV
     order: 1
-  - name: Drop
-    directory: ./drop/**
-    author: Mosin-AV
 
 properties:
   key: value

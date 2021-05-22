@@ -1,6 +1,6 @@
 use r2d2_oracle::OracleConnectionManager;
 use r2d2_oracle::r2d2::Pool;
-use crate::driver::{DriverFactory, Driver, RmigEmptyResult};
+use crate::driver::{DriverFactory, Driver, RmigEmptyResult, DatasourceWrapper};
 use crate::configuration_properties::DatasourceProperties;
 use crate::error::Error;
 use log::debug;
@@ -19,27 +19,14 @@ pub struct DatasourceOracle {
 
 impl DriverFactory<DatasourceOracle> for DatasourceOracle {
     fn new(props: &DatasourceProperties) -> DatasourceOracle {
-        // TODO: Creat fn in mod
-        // TODO: Create method from_str (impl trait)
-
-        let url = props.full_url.as_ref().expect("Url for datasource is required.").as_str();
-        let _url = url::Url::parse(&*url)
+        let wrapper = DatasourceWrapper::new(Box::new(props.to_owned()));
+        let _url = url::Url::parse(&*wrapper.get_url())
             .map_err(|_e| Error::CreatingDatasourceError("Url is not valid. Check your configuration and url parameters.".to_string()))
             .unwrap();
 
         let host = _url.host_str().expect("Not found hostname.").to_owned();
         let port = _url.port().expect("Port required").to_owned().to_string();
 
-        let schema_admin = props.properties.as_ref()
-            .unwrap_or(HashMap::<String, String>::new().borrow())
-            .get("SCHEMA_ADMIN")
-            .unwrap_or(&"".to_string())
-            .to_string();
-
-        let mut separator = "";
-        if !schema_admin.is_empty() {
-            separator = ".";
-        }
         let password = _url.password().unwrap_or_default().to_owned();
         let user = _url.username().to_owned();
         let path = _url.path().trim_start_matches('/');
@@ -59,8 +46,8 @@ impl DriverFactory<DatasourceOracle> for DatasourceOracle {
         DatasourceOracle {
             name: host,
             pool,
-            schema_admin,
-            separator: separator.to_string(),
+            schema_admin: wrapper.get_schema_admin(),
+            separator: wrapper.get_separator(),
         }
     }
 }
@@ -68,7 +55,7 @@ impl DriverFactory<DatasourceOracle> for DatasourceOracle {
 #[async_trait]
 impl Driver for DatasourceOracle {
     fn validate_connection(&self) -> RmigEmptyResult {
-        unimplemented!()
+        self.pool.get().expect("Error while getting connection").ping().map_err(|e| Error::ConnectionValidationError(format!("{:?}", e)))
     }
 
     fn migrate(&self, query: VecDeque<&Query>) -> RmigEmptyResult {

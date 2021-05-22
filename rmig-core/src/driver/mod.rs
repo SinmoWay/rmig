@@ -1,7 +1,7 @@
 use crate::configuration_properties::DatasourceProperties;
 use crate::changelogs::{Query, Migration};
 use async_trait::async_trait;
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 use crate::error::Error;
 
 #[cfg(feature = "postgres")]
@@ -87,6 +87,48 @@ fn generate_lock(db_name: String) -> i64 {
     let mut x = crc32fast::Hasher::new();
     x.update(db_name.as_bytes());
     x.finalize() as i64
+}
+
+struct DatasourceWrapper {
+    properties: Box<DatasourceProperties>,
+}
+
+impl DatasourceWrapper {
+    pub fn new(properties: Box<DatasourceProperties>) -> Self {
+        DatasourceWrapper { properties }
+    }
+
+    pub fn get_url(&self) -> &str {
+        self.properties.full_url.as_ref().expect("Url for datasource is required.").as_str()
+    }
+
+    pub fn get_name(&self) -> String {
+        url::Url::parse(self.get_url())
+            .as_ref()
+            .map_err(|_e| Error::CreatingDatasourceError("Url is not valid. Check your configuration and url parameters.".to_string()))
+            .unwrap()
+            .host_str()
+            .expect("Not found hostname.")
+            .to_owned()
+    }
+
+    pub fn get_schema_admin(&self) -> String {
+        self.properties.properties
+            .as_ref()
+            .unwrap_or(&HashMap::<String, String>::new())
+            .get("SCHEMA_ADMIN")
+            .unwrap_or(&"".to_string())
+            .to_string()
+    }
+
+    pub fn get_separator(&self) -> String {
+        let schema_admin= self.get_schema_admin();
+        let mut separator = "";
+        if !schema_admin.is_empty() {
+            separator = ".";
+        }
+        separator.to_owned()
+    }
 }
 
 enum_str! {

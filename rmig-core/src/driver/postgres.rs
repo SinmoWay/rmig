@@ -2,7 +2,7 @@ use sqlx::{Row, PgPool};
 use log::{info, debug, error};
 use crate::configuration_properties::DatasourceProperties;
 use std::borrow::Borrow;
-use crate::driver::{Driver, DriverFactory, DriverOptions, RmigEmptyResult, generate_lock};
+use crate::driver::{Driver, DriverFactory, DriverOptions, RmigEmptyResult, generate_lock, DatasourceWrapper};
 use std::collections::{HashMap, VecDeque};
 use sqlx::postgres::{PgPoolOptions, PgConnectOptions, PgRow};
 use std::str::FromStr;
@@ -26,19 +26,25 @@ pub struct DatasourcePostgres {
 /// TODO: Maybe impl async!
 impl DriverFactory<DatasourcePostgres> for DatasourcePostgres {
     fn new(props: &DatasourceProperties) -> DatasourcePostgres {
-        let url = props.full_url.as_ref().expect("Url for datasource is required.").as_str();
-        let name = url::Url::parse(&*url).map_err(|_e| Error::CreatingDatasourceError("Url is not valid. Check your configuration and url parameters.".to_string())).unwrap().host_str().expect("Not found hostname.").to_owned();
-        debug!("Creating datasource pool: {}", &*name);
+        let wrapper = DatasourceWrapper::new(Box::new(props.to_owned()));
+        let url = wrapper.get_url();
+        let name = wrapper.get_name();
+
         let pool_opts = PgPoolOptions::new();
-        let conn_opts = PgConnectOptions::from_str(url).map_err(|e| { Error::CreatingDatasourceError(format!("Url is not valid. Check your configuration and url parameters. Datasoruce name: {}\nError: {:?}", &name, e).to_string()) }).unwrap();
+        let conn_opts = PgConnectOptions::from_str(url)
+            .map_err(|e| { Error::CreatingDatasourceError(format!("Url is not valid. Check your configuration and url parameters. Datasoruce name: {}\nError: {:?}", &name, e).to_string()) })
+            .unwrap();
         let pool = Box::new(block_on(pool_opts.connect_with(conn_opts)).map_err(|e| Error::CreatingDatasourceError(format!("Datasource is not configured or not working. {}\nError: {:?}", &name, e).to_string())).unwrap());
-        let schema_admin = props.properties.as_ref().unwrap_or(HashMap::<String, String>::new().borrow()).get("SCHEMA_ADMIN").unwrap_or(&"".to_string()).to_string();
-        let mut separator = "";
-        if !schema_admin.is_empty() {
-            separator = ".";
-        }
-        let postgres = DatasourcePostgres { name: name.clone(), pool, schema_admin, separator: separator.to_string() };
-        &postgres.validate_connection().expect(format!("Failed creating datasource by name: {}", &*name).as_str());
+
+        let postgres = DatasourcePostgres {
+            name,
+            pool,
+            schema_admin: wrapper.get_schema_admin(),
+            separator: wrapper.get_separator(),
+        };
+
+        &postgres.validate_connection().expect(format!("Failed creating datasource by name: {}", &*postgres.name).as_str());
+
         postgres
     }
 }
@@ -205,6 +211,11 @@ impl Drop for DatasourcePostgres {
 
 #[cfg(test)]
 mod local_test {
+    use crate::driver::postgres::DatasourcePostgres;
+    use crate::driver::DriverFactory;
+    use crate::error::Error;
+    use crate::configuration_properties::DatasourceProperties;
+
     #[test]
     pub fn test_crc_32() {
         let mut x = crc32fast::Hasher::new();
@@ -213,4 +224,7 @@ mod local_test {
         println!("x = {}", hash);
         assert_eq!(1076699909, hash as i64)
     }
+
+    #[test]
+    pub fn create_with_error() {}
 }
