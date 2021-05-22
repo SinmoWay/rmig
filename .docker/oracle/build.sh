@@ -9,4 +9,3 @@ if [ $VERSION == "18.4.0" ]; then
 fi;
 
 docker build --force-rm=true --no-cache=true -t oracle/database:$VERSION -f $DOCKERFILE ./$VERSION/
-
