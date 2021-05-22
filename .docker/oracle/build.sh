@@ -8,5 +8,5 @@ if [ $VERSION == "18.4.0" ]; then
   DOCKERFILE="/18.4.0/Dockerfile"
 fi;
 
-call docker build --force-rm=true --no-cache=true -t oracle/database:$VERSION -f $DOCKERFILE ./$VERSION/
+docker build --force-rm=true --no-cache=true -t oracle/database:$VERSION -f $DOCKERFILE ./$VERSION/
 
