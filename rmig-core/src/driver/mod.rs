@@ -122,7 +122,7 @@ impl DatasourceWrapper {
     }
 
     pub fn get_separator(&self) -> String {
-        let schema_admin= self.get_schema_admin();
+        let schema_admin = self.get_schema_admin();
         let mut separator = "";
         if !schema_admin.is_empty() {
             separator = ".";

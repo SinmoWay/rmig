@@ -10,6 +10,8 @@ services:
       - 1521:1521
       - 8080:8080
       - 5500:5500
+    environment:
+      ORACLE_PWD: 123456
     volumes:
       - ora_volume:/opt/oracle/oradata
 
