@@ -1,3 +1,1 @@
-pub fn ttt() {
-
-}
+pub fn ttt() {}

@@ -1,12 +1,12 @@
-use glob::glob;
-use serde::{Serialize, Deserialize};
-use std::collections::{VecDeque, HashMap};
-use log::{debug, trace};
-use crate::tera_manager::TeraManager;
-use std::path::PathBuf;
-use std::str::FromStr;
 use crate::driver::Driver;
 use crate::error::Error;
+use crate::tera_manager::TeraManager;
+use glob::glob;
+use log::{debug, trace};
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, VecDeque};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Changelogs {
@@ -39,7 +39,11 @@ pub struct Directory {
 
 impl Directory {
     pub fn new(name: String) -> Self {
-        Directory { name, migration_list: VecDeque::new(), _directory: None }
+        Directory {
+            name,
+            migration_list: VecDeque::new(),
+            _directory: None,
+        }
     }
 }
 
@@ -53,7 +57,11 @@ impl FromStr for Directory {
 
 impl Default for Directory {
     fn default() -> Self {
-        Directory { name: ".".to_owned(), migration_list: Default::default(), _directory: None }
+        Directory {
+            name: ".".to_owned(),
+            migration_list: Default::default(),
+            _directory: None,
+        }
     }
 }
 
@@ -125,13 +133,18 @@ impl<'a> ChangelogReader<'a> {
         }
     }
 
-    pub fn read_changelog_with_env(mut self, yaml_file: String, env: Option<HashMap<String, String>>) -> anyhow::Result<Changelogs, Error> {
+    pub fn read_changelog_with_env(
+        mut self,
+        yaml_file: String,
+        env: Option<HashMap<String, String>>,
+    ) -> anyhow::Result<Changelogs, Error> {
         self.params = env;
-        let mut yaml = std::fs::read_to_string(yaml_file.as_str()).map_err(|e| Error::IOError(e.to_string()))?;
-
+        let mut yaml = std::fs::read_to_string(yaml_file.as_str())
+            .map_err(|e| Error::IOError(e.to_string()))?;
 
         if self.params.as_ref().is_some() {
-            yaml = TeraManager::new(self.params.as_ref().unwrap().clone()).apply("changelogs.yml", yaml.as_str())?;
+            yaml = TeraManager::new(self.params.as_ref().unwrap().clone())
+                .apply("changelogs.yml", yaml.as_str())?;
         }
 
         let mut changelogs: Changelogs = serde_yaml::from_str(yaml.as_str())
@@ -145,14 +158,13 @@ impl<'a> ChangelogReader<'a> {
         for c in changelogs.changelogs.iter_mut() {
             let dir = self.read_directory(Directory::from_str(&c.directory)?)?;
             c._directory = dir;
-        };
+        }
 
         Ok(changelogs)
     }
 
     pub fn read_directory(&self, mut dir: Directory) -> anyhow::Result<Directory, Error> {
-        let paths = glob(&dir.name)
-            .map_err(|e| Error::IOError(e.msg.to_owned()))?;
+        let paths = glob(&dir.name).map_err(|e| Error::IOError(e.msg.to_owned()))?;
         for path in paths {
             let path_buf = path.expect("Error while getting file path.");
             debug!("Including path's: {:?}", path_buf);
@@ -162,7 +174,8 @@ impl<'a> ChangelogReader<'a> {
                 dir.migration_list.push_back(migration)
             } else {
                 let x = path_buf.to_str().expect("File path is not readable.");
-                let sub_directory = self.read_directory(Directory::from_str(format!("{}{}", x, "/*").as_str())?)?;
+                let sub_directory =
+                    self.read_directory(Directory::from_str(format!("{}{}", x, "/*").as_str())?)?;
 
                 fn create_directory(dir: Directory) -> Option<Box<VecDeque<Directory>>> {
                     let mut deque = VecDeque::<Directory>::new();
@@ -171,10 +184,16 @@ impl<'a> ChangelogReader<'a> {
                 }
 
                 //Посмотреть что тут за пиздец
-                dir._directory = Some(dir._directory.as_mut().map(|d| {
-                    d.push_back(sub_directory.clone());
-                    d
-                }).unwrap_or(&mut create_directory(sub_directory.clone()).unwrap()).to_owned());
+                dir._directory = Some(
+                    dir._directory
+                        .as_mut()
+                        .map(|d| {
+                            d.push_back(sub_directory.clone());
+                            d
+                        })
+                        .unwrap_or(&mut create_directory(sub_directory.clone()).unwrap())
+                        .to_owned(),
+                );
             }
         }
         Ok(dir)
@@ -191,7 +210,8 @@ impl<'a> ChangelogReader<'a> {
             .to_string();
 
         if self.params.as_ref().is_some() {
-            sql = TeraManager::new(self.params.as_ref().unwrap().clone()).apply(&*name, sql.as_str())?;
+            sql = TeraManager::new(self.params.as_ref().unwrap().clone())
+                .apply(&*name, sql.as_str())?;
         }
 
         let hash = format!("{:x}", md5::compute(&sql));
@@ -204,14 +224,14 @@ impl<'a> ChangelogReader<'a> {
                 .parse()
                 .map_err(|_e| Error::ParseFileError("File name is not contains order. Please use format order.filename.any extension. For example: 1.init.sql".to_owned()))?;
         } else {
-            return Err(Error::ParseError(name, "Error while read migration. Extension required.".to_string()));
+            return Err(Error::ParseError(
+                name,
+                "Error while read migration. Extension required.".to_string(),
+            ));
         }
 
         // Collections separating lines
-        let query = sql
-            .as_str()
-            .split(&self.separator)
-            .collect::<Vec<&str>>();
+        let query = sql.as_str().split(&self.separator).collect::<Vec<&str>>();
 
         let mut querys = VecDeque::<Query>::with_capacity(query.len());
 
@@ -249,8 +269,12 @@ impl<'a> ChangelogReader<'a> {
             if sum > 1u8 {
                 let opts_str = lines[0].replace("--rmig--", "");
                 // TODO: Посмотреть по коду что-то тут не так.
-                opts = Some(serde_json::from_str(opts_str.as_str())
-                    .map_err(|e| Error::ParseFileError(format!("Options in query by {} is not parse.\n Serialize error: {:?}", text, e)))?);
+                opts = Some(serde_json::from_str(opts_str.as_str()).map_err(|e| {
+                    Error::ParseFileError(format!(
+                        "Options in query by {} is not parse.\n Serialize error: {:?}",
+                        text, e
+                    ))
+                })?);
             }
         }
         Ok(opts)
@@ -282,17 +306,25 @@ pub struct ChangelogRunner<'a> {
 }
 
 impl<'a> ChangelogRunner<'a> {
-    pub fn new_from_file(changelog_path: String,
-                         datasources: Vec<&'a Box<dyn Driver>>,
-                         properties: Option<HashMap<String, String>>) -> Self {
-        let changelog_reader = properties.as_ref()
+    pub fn new_from_file(
+        changelog_path: String,
+        datasources: Vec<&'a Box<dyn Driver>>,
+        properties: Option<HashMap<String, String>>,
+    ) -> Self {
+        let changelog_reader = properties
+            .as_ref()
             .and_then(|p| p.get("query_separator"))
             .map(|path| ChangelogReader::new(path.as_str()))
             .unwrap_or_default();
         ChangelogRunner {
             changelog: changelog_reader
                 .read_changelog_with_env(changelog_path.to_owned(), properties.clone())
-                .unwrap_or_else(|e| panic!("Error while reading changelog with name {}", &*changelog_path)),
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Error while reading changelog with name {}",
+                        &*changelog_path
+                    )
+                }),
             datasources,
             properties,
         }
@@ -300,11 +332,19 @@ impl<'a> ChangelogRunner<'a> {
 
     pub fn filter_by_stage(mut self, stages: Vec<String>) -> Self {
         if !stages.is_empty() {
-            debug!("Starting filtering changelog, current size: {}", &self.changelog.changelogs.len());
-            self.changelog.changelogs = self.changelog.changelogs.into_iter().filter(|n| {
-                trace!("Filtering changelog ");
-                stages.contains(&n.name)
-            }).collect();
+            debug!(
+                "Starting filtering changelog, current size: {}",
+                &self.changelog.changelogs.len()
+            );
+            self.changelog.changelogs = self
+                .changelog
+                .changelogs
+                .into_iter()
+                .filter(|n| {
+                    trace!("Filtering changelog ");
+                    stages.contains(&n.name)
+                })
+                .collect();
             debug!("After filtering size: {}", &self.changelog.changelogs.len());
         }
         self
@@ -314,7 +354,7 @@ impl<'a> ChangelogRunner<'a> {
 /// TODO: Write tests
 #[cfg(test)]
 mod local_test {
-    use crate::changelogs::{QueryOptions, ChangelogRunner};
+    use crate::changelogs::{ChangelogRunner, QueryOptions};
     use std::collections::HashMap;
 
     #[test]

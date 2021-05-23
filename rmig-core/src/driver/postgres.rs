@@ -1,18 +1,20 @@
-use sqlx::{Row, PgPool};
-use log::{info, debug, error};
+use crate::changelogs::{Migration, Query};
 use crate::configuration_properties::DatasourceProperties;
-use std::borrow::Borrow;
-use crate::driver::{Driver, DriverFactory, DriverOptions, RmigEmptyResult, generate_lock, DatasourceWrapper};
-use std::collections::{HashMap, VecDeque};
-use sqlx::postgres::{PgPoolOptions, PgConnectOptions, PgRow};
-use std::str::FromStr;
-use futures::executor::block_on;
-use crate::changelogs::{Query, Migration};
-use std::time::{Instant};
-use async_trait::async_trait;
-use crate::tera_manager::TeraManager;
-use futures::TryFutureExt;
+use crate::driver::{
+    generate_lock, DatasourceWrapper, Driver, DriverFactory, DriverOptions, RmigEmptyResult,
+};
 use crate::error::Error;
+use crate::tera_manager::TeraManager;
+use async_trait::async_trait;
+use futures::executor::block_on;
+use futures::TryFutureExt;
+use log::{debug, error, info};
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgRow};
+use sqlx::{PgPool, Row};
+use std::borrow::Borrow;
+use std::collections::{HashMap, VecDeque};
+use std::str::FromStr;
+use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub struct DatasourcePostgres {
@@ -34,7 +36,19 @@ impl DriverFactory<DatasourcePostgres> for DatasourcePostgres {
         let conn_opts = PgConnectOptions::from_str(url)
             .map_err(|e| { Error::CreatingDatasourceError(format!("Url is not valid. Check your configuration and url parameters. Datasoruce name: {}\nError: {:?}", &name, e).to_string()) })
             .unwrap();
-        let pool = Box::new(block_on(pool_opts.connect_with(conn_opts)).map_err(|e| Error::CreatingDatasourceError(format!("Datasource is not configured or not working. {}\nError: {:?}", &name, e).to_string())).unwrap());
+        let pool = Box::new(
+            block_on(pool_opts.connect_with(conn_opts))
+                .map_err(|e| {
+                    Error::CreatingDatasourceError(
+                        format!(
+                            "Datasource is not configured or not working. {}\nError: {:?}",
+                            &name, e
+                        )
+                        .to_string(),
+                    )
+                })
+                .unwrap(),
+        );
 
         let postgres = DatasourcePostgres {
             name,
@@ -43,7 +57,9 @@ impl DriverFactory<DatasourcePostgres> for DatasourcePostgres {
             separator: wrapper.get_separator(),
         };
 
-        &postgres.validate_connection().expect(format!("Failed creating datasource by name: {}", &*postgres.name).as_str());
+        &postgres
+            .validate_connection()
+            .expect(format!("Failed creating datasource by name: {}", &*postgres.name).as_str());
 
         postgres
     }
@@ -52,7 +68,8 @@ impl DriverFactory<DatasourcePostgres> for DatasourcePostgres {
 #[async_trait]
 impl Driver for DatasourcePostgres {
     fn validate_connection(&self) -> RmigEmptyResult {
-        block_on(sqlx::query("SELECT 1").execute(self.pool.borrow())).expect("Error while checking connection");
+        block_on(sqlx::query("SELECT 1").execute(self.pool.borrow()))
+            .expect("Error while checking connection");
         info!("Connection pool success creating.\nPing query (select 1) is success.");
         Ok(())
     }
@@ -60,16 +77,19 @@ impl Driver for DatasourcePostgres {
     // Sync function
     // TODO: Check pipeline query and analyze.
     fn migrate(&self, query: VecDeque<&Query>) -> RmigEmptyResult {
-        let mut tx = block_on(self.pool.begin()).map_err(|e| Error::SQLError(format!("{:?}.\nOpen transaction failed.", e)))?;
+        let mut tx = block_on(self.pool.begin())
+            .map_err(|e| Error::SQLError(format!("{:?}.\nOpen transaction failed.", e)))?;
         let start = Instant::now();
 
         for q in query {
             debug!("Running sql: {}", &*q.query);
             // Execute, if error, rollback transaction
-            block_on(sqlx::query(&*q.query).execute(&mut tx)).map_err(|e| Error::SQLError(format!("{:?}.\nSQL - {}", e, &*q.query)))?;
-        };
+            block_on(sqlx::query(&*q.query).execute(&mut tx))
+                .map_err(|e| Error::SQLError(format!("{:?}.\nSQL - {}", e, &*q.query)))?;
+        }
 
-        block_on(tx.commit()).map_err(|e| Error::SQLError(format!("{:?}.\nCommit transaction failed.", e)))?;
+        block_on(tx.commit())
+            .map_err(|e| Error::SQLError(format!("{:?}.\nCommit transaction failed.", e)))?;
 
         let elapsed = start.elapsed();
 
@@ -83,17 +103,29 @@ impl Driver for DatasourcePostgres {
         let sep = &self.separator;
         let sql = format!("select exists(select 1 from {}{}CHANGELOGS where FILENAME=$1) as erow, exists(select 1 from {}{}CHANGELOGS where FILENAME=$1 and HASH = $2) as erowhash", schema, sep, schema, sep);
         // language=SQL
-        let query: PgRow = block_on(sqlx::query(&*sql)
-            .bind(&name)
-            .bind(&hash)
-            .fetch_one(&*self.pool))
-            // language=RUST
-            .map_err(|e| Error::SQLError(format!("Row with filename {} and hash {} return error.\nError: {:?}", &name, &hash, e).to_string()))?;
+        let query: PgRow = block_on(
+            sqlx::query(&*sql)
+                .bind(&name)
+                .bind(&hash)
+                .fetch_one(&*self.pool),
+        )
+        // language=RUST
+        .map_err(|e| {
+            Error::SQLError(
+                format!(
+                    "Row with filename {} and hash {} return error.\nError: {:?}",
+                    &name, &hash, e
+                )
+                .to_string(),
+            )
+        })?;
 
         let erow: bool = query.get("erow");
         // If row exists find row with hash.
         if !erow {
-            return Err(Error::RowError(format!("Row with filename {} not found.", &name).to_string()));
+            return Err(Error::RowError(
+                format!("Row with filename {} not found.", &name).to_string(),
+            ));
         }
 
         let erowhash: bool = query.get("erowhash");
@@ -106,7 +138,11 @@ impl Driver for DatasourcePostgres {
     }
 
     fn check_rmig_core_table(&self) -> RmigEmptyResult {
-        let sub_query = if self.schema_admin.ne("") { format!(" AND SCHEMANAME = '{}'", &*self.schema_admin) } else { "".to_string() };
+        let sub_query = if self.schema_admin.ne("") {
+            format!(" AND SCHEMANAME = '{}'", &*self.schema_admin)
+        } else {
+            "".to_string()
+        };
         let ex = block_on(sqlx::query(format!("SELECT EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'CHANGELOGS' or tablename = 'changelogs'{}) as ex", sub_query).as_str())
             // language=RUST
             .fetch_one(&*self.pool)).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
@@ -120,17 +156,17 @@ impl Driver for DatasourcePostgres {
 
     fn create_rmig_core_table(&self) -> RmigEmptyResult {
         info!("Creating core table.");
-        let table =
-            if self.schema_admin.ne("") {
-                let mut map = HashMap::<String, String>::new();
-                map.insert("SCHEMA_ADMIN".to_string(), self.schema_admin.clone());
-                let table = include_str!("../init/pg_init.sql");
-                TeraManager::new(map).apply("core.sql", table)?
-            } else {
-                TeraManager::default().apply("core.sql", include_str!("../init/pg_init.sql"))?
-            };
+        let table = if self.schema_admin.ne("") {
+            let mut map = HashMap::<String, String>::new();
+            map.insert("SCHEMA_ADMIN".to_string(), self.schema_admin.clone());
+            let table = include_str!("../init/pg_init.sql");
+            TeraManager::new(map).apply("core.sql", table)?
+        } else {
+            TeraManager::default().apply("core.sql", include_str!("../init/pg_init.sql"))?
+        };
 
-        block_on(sqlx::query(&*table).execute(&*self.pool)).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+        block_on(sqlx::query(&*table).execute(&*self.pool))
+            .map_err(|e| Error::SQLError(format!("{:?}", e)))?;
         Ok(())
     }
 
@@ -158,7 +194,8 @@ impl Driver for DatasourcePostgres {
             .bind(lock_id)
             .execute(self.pool.borrow())
             // language=RUST
-            .await.map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+            .await
+            .map_err(|e| Error::SQLError(format!("{:?}", e)))?;
 
         Ok(())
     }
@@ -176,18 +213,24 @@ impl Driver for DatasourcePostgres {
             .bind(lock_id)
             .execute(self.pool.borrow())
             // language=RUST
-            .await.map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+            .await
+            .map_err(|e| Error::SQLError(format!("{:?}", e)))?;
 
         Ok(())
     }
 
     async fn add_new_migration(&self, migration: Migration) -> RmigEmptyResult {
-        let _sql = format!("INSERT INTO {}{}CHANGELOGS(FILENAME, ORDER_ID, HASH) VALUES ($1,$2,$3);", &*self.schema_admin, &*self.separator);
+        let _sql = format!(
+            "INSERT INTO {}{}CHANGELOGS(FILENAME, ORDER_ID, HASH) VALUES ($1,$2,$3);",
+            &*self.schema_admin, &*self.separator
+        );
         sqlx::query(&*_sql)
             .bind(&*migration.name)
             .bind(migration.order.clone())
             .bind(&*migration.hash)
-            .execute(self.pool.borrow()).await.map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+            .execute(self.pool.borrow())
+            .await
+            .map_err(|e| Error::SQLError(format!("{:?}", e)))?;
         Ok(())
     }
 }
@@ -197,7 +240,8 @@ async fn current_database(pool: &PgPool) -> anyhow::Result<String, Error> {
     Ok(sqlx::query_scalar("SELECT current_database()")
         .fetch_one(pool)
         // language=RUST
-        .await.map_err(|e| Error::SQLError(format!("{:?}", e)))?)
+        .await
+        .map_err(|e| Error::SQLError(format!("{:?}", e)))?)
 }
 
 impl Drop for DatasourcePostgres {
@@ -214,18 +258,18 @@ impl Drop for DatasourcePostgres {
 // postgres
 #[cfg(all(test))]
 mod local_test {
-    use crate::driver::postgres::DatasourcePostgres;
-    use crate::driver::{DriverFactory, Driver, RmigEmptyResult};
-    use crate::error::Error;
-    use crate::configuration_properties::DatasourceProperties;
-    use futures::executor::block_on;
-    use log4rs::append::console::{ConsoleAppender, Target};
-    use log4rs::Config;
-    use log4rs::config::{Appender, Root};
-    use log::LevelFilter;
     use crate::changelogs::{Migration, Query};
-    use std::collections::VecDeque;
+    use crate::configuration_properties::DatasourceProperties;
+    use crate::driver::postgres::DatasourcePostgres;
+    use crate::driver::{Driver, DriverFactory, RmigEmptyResult};
+    use crate::error::Error;
+    use futures::executor::block_on;
+    use log::LevelFilter;
+    use log4rs::append::console::{ConsoleAppender, Target};
+    use log4rs::config::{Appender, Root};
+    use log4rs::Config;
     use sqlx::Row;
+    use std::collections::VecDeque;
 
     #[test]
     pub fn test_crc_32() {
@@ -251,7 +295,8 @@ mod local_test {
         assert_eq!((), postgres.validate_connection()?);
         assert_eq!((), block_on(postgres.lock())?);
 
-        postgres.check_rmig_core_table()
+        postgres
+            .check_rmig_core_table()
             .unwrap_or_else(|_e| postgres.create_rmig_core_table().unwrap());
 
         assert_eq!((), postgres.check_rmig_core_table()?);
@@ -279,28 +324,37 @@ mod local_test {
         assert_eq!((), block_on(postgres.lock())?);
         let migration = create_migration(name.to_owned(), hash.to_owned());
 
-        postgres.check_rmig_core_table().unwrap_or_else(|_e|
-            postgres.create_rmig_core_table().unwrap()
-        );
+        postgres
+            .check_rmig_core_table()
+            .unwrap_or_else(|_e| postgres.create_rmig_core_table().unwrap());
 
-        postgres.find_in_core_table(name.to_owned(), hash.to_owned()).unwrap_or_else(
-            |e| {
-                postgres.migrate(migration.query_list.iter().map(|i| i).collect()).unwrap();
+        postgres
+            .find_in_core_table(name.to_owned(), hash.to_owned())
+            .unwrap_or_else(|e| {
+                postgres
+                    .migrate(migration.query_list.iter().map(|i| i).collect())
+                    .unwrap();
                 block_on(postgres.add_new_migration(migration)).unwrap();
-            }
-        );
+            });
 
-        let row: (i32, ) = block_on(sqlx::query_as("SELECT 150 as result FROM rmig_test WHERE test = '123456'").fetch_one(&*postgres.pool)).unwrap();
+        let row: (i32,) = block_on(
+            sqlx::query_as("SELECT 150 as result FROM rmig_test WHERE test = '123456'")
+                .fetch_one(&*postgres.pool),
+        )
+        .unwrap();
         assert_eq!(150, row.0);
 
         assert_eq!((), block_on(postgres.unlock())?);
 
         // Clear information
         block_on(sqlx::query("DROP TABLE rmig_test").execute(&*postgres.pool)).unwrap();
-        block_on(sqlx::query("DELETE FROM changelogs WHERE FILENAME = $1 AND HASH = $2")
-            .bind(name.to_owned())
-            .bind(hash.to_owned())
-            .execute(&*postgres.pool)).unwrap();
+        block_on(
+            sqlx::query("DELETE FROM changelogs WHERE FILENAME = $1 AND HASH = $2")
+                .bind(name.to_owned())
+                .bind(hash.to_owned())
+                .execute(&*postgres.pool),
+        )
+        .unwrap();
         Ok(())
     }
 
@@ -330,7 +384,8 @@ mod local_test {
 
     fn create_local_connection() -> DatasourcePostgres {
         init_logger();
-        let url = std::env::var("PG_DB_URL").unwrap_or("postgres://postgres:example@localhost:5432/postgres".to_owned());
+        let url = std::env::var("PG_DB_URL")
+            .unwrap_or("postgres://postgres:example@localhost:5432/postgres".to_owned());
         let properties = DatasourceProperties::new(Some("Local pg ds".to_string()), url, None);
         DatasourcePostgres::new(&properties)
     }
@@ -339,12 +394,12 @@ mod local_test {
         let stdout = ConsoleAppender::builder().target(Target::Stdout).build();
         let config = Config::builder()
             .appender(Appender::builder().build("stdout", Box::new(stdout)))
-            .build(
-                Root::builder()
-                    .appender("stdout")
-                    .build(LevelFilter::Info),
-            )
-            .map_err(|_e| Error::LoggerConfigurationError(String::from("Configuration is empty or include another error.")))?;
+            .build(Root::builder().appender("stdout").build(LevelFilter::Info))
+            .map_err(|_e| {
+                Error::LoggerConfigurationError(String::from(
+                    "Configuration is empty or include another error.",
+                ))
+            })?;
 
         // Use this to change log levels at runtime.
         // This means you can change the default log level to trace

@@ -1,9 +1,9 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DatasourcesProperties {
-    pub datasources: Vec<DatasourceProperties>
+    pub datasources: Vec<DatasourceProperties>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -17,7 +17,15 @@ pub struct DatasourceProperties {
 }
 
 impl DatasourceProperties {
-    pub fn new(name: Option<String>, _url: String, properties: Option<HashMap<String, String>>) -> Self {
-        DatasourceProperties {name, properties, full_url: Some(_url) }
+    pub fn new(
+        name: Option<String>,
+        _url: String,
+        properties: Option<HashMap<String, String>>,
+    ) -> Self {
+        DatasourceProperties {
+            name,
+            properties,
+            full_url: Some(_url),
+        }
     }
 }

@@ -1,15 +1,15 @@
+use crate::changelogs::{Migration, Query};
 use crate::configuration_properties::DatasourceProperties;
-use crate::changelogs::{Query, Migration};
-use async_trait::async_trait;
-use std::collections::{VecDeque, HashMap};
 use crate::error::Error;
+use async_trait::async_trait;
+use std::collections::{HashMap, VecDeque};
 
-#[cfg(feature = "postgres")]
-pub mod postgres;
-#[cfg(feature = "ora")]
-pub mod oracle;
 #[cfg(feature = "mysql")]
 pub mod mysql;
+#[cfg(feature = "ora")]
+pub mod oracle;
+#[cfg(feature = "postgres")]
+pub mod postgres;
 
 use crate::enum_str;
 
@@ -60,11 +60,17 @@ pub struct DatasourceFactory {}
 
 impl DatasourceFactory {
     pub fn new(props: &DatasourceProperties) -> anyhow::Result<Box<dyn Driver>, Error> {
-        let url = props.full_url.as_ref().expect("Url for datasource is required.").to_string();
+        let url = props
+            .full_url
+            .as_ref()
+            .expect("Url for datasource is required.")
+            .to_string();
 
         #[cfg(feature = "postgres")]
         if url.trim().starts_with("postgres") {
-            return Ok(Box::new(crate::driver::postgres::DatasourcePostgres::new(props)));
+            return Ok(Box::new(crate::driver::postgres::DatasourcePostgres::new(
+                props,
+            )));
         }
 
         #[cfg(feature = "ora")]
@@ -78,8 +84,14 @@ impl DatasourceFactory {
             panic!("Mysql driver no impl.");
         }
 
-        let _url = url::Url::parse(&*url).expect("Error while parsing url. Please verify and try again.").host_str().expect("Url is not valid. Empty host.").to_string();
-        Err(Error::ConnectionValidationError(format!("Driver by url {} not found.", &*_url).to_owned()))
+        let _url = url::Url::parse(&*url)
+            .expect("Error while parsing url. Please verify and try again.")
+            .host_str()
+            .expect("Url is not valid. Empty host.")
+            .to_string();
+        Err(Error::ConnectionValidationError(
+            format!("Driver by url {} not found.", &*_url).to_owned(),
+        ))
     }
 }
 
@@ -99,13 +111,21 @@ impl DatasourceWrapper {
     }
 
     pub fn get_url(&self) -> &str {
-        self.properties.full_url.as_ref().expect("Url for datasource is required.").as_str()
+        self.properties
+            .full_url
+            .as_ref()
+            .expect("Url for datasource is required.")
+            .as_str()
     }
 
     pub fn get_name(&self) -> String {
         url::Url::parse(self.get_url())
             .as_ref()
-            .map_err(|_e| Error::CreatingDatasourceError("Url is not valid. Check your configuration and url parameters.".to_string()))
+            .map_err(|_e| {
+                Error::CreatingDatasourceError(
+                    "Url is not valid. Check your configuration and url parameters.".to_string(),
+                )
+            })
             .unwrap()
             .host_str()
             .expect("Not found hostname.")
@@ -113,7 +133,8 @@ impl DatasourceWrapper {
     }
 
     pub fn get_schema_admin(&self) -> String {
-        self.properties.properties
+        self.properties
+            .properties
             .as_ref()
             .unwrap_or(&HashMap::<String, String>::new())
             .get("SCHEMA_ADMIN")
@@ -155,7 +176,10 @@ mod test_local {
         assert_eq!("MaxLifetime", DriverOptions::MaxLifetime.name());
         assert_eq!("IldeTimeout", DriverOptions::IldeTimeout.name());
         assert_eq!("AfterConnect", DriverOptions::AfterConnect.name());
-        assert_eq!("AfterConnectScript", DriverOptions::AfterConnectScript.name());
+        assert_eq!(
+            "AfterConnectScript",
+            DriverOptions::AfterConnectScript.name()
+        );
         Ok(())
     }
 }
