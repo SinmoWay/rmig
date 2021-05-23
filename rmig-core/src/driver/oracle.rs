@@ -3,11 +3,11 @@ use r2d2_oracle::r2d2::Pool;
 use crate::driver::{DriverFactory, Driver, RmigEmptyResult, DatasourceWrapper};
 use crate::configuration_properties::DatasourceProperties;
 use crate::error::Error;
-use log::debug;
+use log::{debug, info};
 use std::collections::{VecDeque, HashMap};
 use crate::changelogs::{Query, Migration};
 use async_trait::async_trait;
-use std::borrow::Borrow;
+use crate::tera_manager::TeraManager;
 
 #[derive(Clone, Debug)]
 pub struct DatasourceOracle {
@@ -54,7 +54,19 @@ impl DriverFactory<DatasourceOracle> for DatasourceOracle {
 #[async_trait]
 impl Driver for DatasourceOracle {
     fn validate_connection(&self) -> RmigEmptyResult {
-        self.pool.get().expect("Error while getting connection").ping().map_err(|e| Error::ConnectionValidationError(format!("{:?}", e)))
+        let conn = self.pool.get().expect("Error while getting connection");
+        let rows = conn.query_as::<(i32)>("SELECT 1 FROM DUAL;", &[])
+            .map_err(|e| Error::ConnectionValidationError(format!("{:?}", e)))?;
+
+        for row in rows {
+            let i = row.map_err(|e| Error::ConnectionValidationError(format!("{:?}", e)))?;
+
+            if i != 1 {
+                return Err(Error::RowError(format!("Connection error. SELECT 1 FROM DUAL, return unexpected result: {}", i)));
+            }
+        }
+
+        Ok(())
     }
 
     fn migrate(&self, query: VecDeque<&Query>) -> RmigEmptyResult {
@@ -70,7 +82,17 @@ impl Driver for DatasourceOracle {
     }
 
     fn create_rmig_core_table(&self) -> RmigEmptyResult {
-        unimplemented!()
+        info!("Creating core table.");
+        let table =
+            if self.schema_admin.ne("") {
+                let mut map = HashMap::<String, String>::new();
+                map.insert("SCHEMA_ADMIN".to_string(), self.schema_admin.clone());
+                let table = include_str!("../init/ora_init.sql");
+                TeraManager::new(map).apply("core.sql", table)?
+            } else { include_str!("../init/ora_init.sql").to_string() };
+
+        self.pool.get().expect("Error while getting connection").query(&*table, &[]).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+        Ok(())
     }
 
     fn get_name(&self) -> &str {
