@@ -3,11 +3,13 @@ use r2d2_oracle::r2d2::Pool;
 use crate::driver::{DriverFactory, Driver, RmigEmptyResult, DatasourceWrapper};
 use crate::configuration_properties::DatasourceProperties;
 use crate::error::Error;
-use log::{debug, info};
+use log::{debug, info, error};
 use std::collections::{VecDeque, HashMap};
 use crate::changelogs::{Query, Migration};
 use async_trait::async_trait;
 use crate::tera_manager::TeraManager;
+use std::time::Instant;
+use r2d2_oracle::oracle::Statement;
 
 #[derive(Clone, Debug)]
 pub struct DatasourceOracle {
@@ -70,7 +72,36 @@ impl Driver for DatasourceOracle {
     }
 
     fn migrate(&self, query: VecDeque<&Query>) -> RmigEmptyResult {
-        unimplemented!()
+        let mut conn = self.pool.get().expect("Error while getting connection");
+
+        if conn.autocommit() {
+            conn.set_autocommit(false)
+        }
+
+        let start = Instant::now();
+
+        for q in query {
+            debug!("Running sql: {}", &*q.query);
+            // Execute, if error, rollback transaction
+            match conn.execute(&*q.query, &[]).map_err(|e| Error::SQLError(format!("{:?}.\nSQL - {}", e, &*q.query))) {
+                // Ignore normal statement
+                Ok(_o) => { Ok(()) }
+                // If query return error, rollback transaction
+                Err(e) => {
+                    error!("Query {}\nexited with error.", &*q.query);
+                    conn.rollback().map_err(|e| Error::RowError(format!("{:?}. Transaction is not rollback.", e))).unwrap();
+                    Err(Error::RowError(format!("{:?}", e)))
+                }
+            }?;
+        };
+
+        conn.commit().map_err(|e| Error::RowError(format!("{:?}. Transaction is not commit.", e)))?;
+
+        let elapsed = start.elapsed();
+
+        debug!("Success! Time elapsed: {:?}", elapsed);
+
+        Ok(())
     }
 
     fn find_in_core_table(&self, name: String, hash: String) -> RmigEmptyResult {
@@ -90,17 +121,23 @@ impl Driver for DatasourceOracle {
                 let table = include_str!("../init/ora_init.sql");
                 TeraManager::new(map).apply("core.sql", table)?
             } else { include_str!("../init/ora_init.sql").to_string() };
+        let mut conn = self.pool.get().expect("Error while getting connection");
 
-        self.pool.get().expect("Error while getting connection").query(&*table, &[]).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+        conn.execute(&*table, &[]).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+
+        if !conn.autocommit() {
+            conn.commit().map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+        }
+
         Ok(())
     }
 
     fn get_name(&self) -> &str {
-        unimplemented!()
+        self.name.as_str()
     }
 
     fn close(&self) {
-        unimplemented!()
+        // FIXME: Do nothing.
     }
 
     async fn lock(&self) -> RmigEmptyResult {

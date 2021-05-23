@@ -24,9 +24,16 @@ impl TeraManager {
     }
 }
 
+impl Default for TeraManager {
+    fn default() -> Self {
+        TeraManager::new(HashMap::<String, String>::new())
+    }
+}
+
 #[cfg(test)]
 mod local_test {
     extern crate test;
+
     use std::collections::HashMap;
     use crate::tera_manager::TeraManager;
     use test::Bencher;

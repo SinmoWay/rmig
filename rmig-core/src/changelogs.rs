@@ -64,7 +64,7 @@ pub struct Migration {
     /// Hash MD5
     pub hash: String,
     /// Separator for split query
-    separator: String,
+    pub separator: String,
     /// Execution order
     pub order: i64,
     /// Query's

@@ -107,7 +107,7 @@ impl Driver for DatasourcePostgres {
 
     fn check_rmig_core_table(&self) -> RmigEmptyResult {
         let sub_query = if self.schema_admin.ne("") { format!(" AND SCHEMANAME = '{}'", &*self.schema_admin) } else { "".to_string() };
-        let ex = block_on(sqlx::query(format!("SELECT EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'CHANGELOGS'{}) as ex", sub_query).as_str())
+        let ex = block_on(sqlx::query(format!("SELECT EXISTS(SELECT 1 FROM pg_tables WHERE tablename = 'CHANGELOGS' or tablename = 'changelogs'{}) as ex", sub_query).as_str())
             // language=RUST
             .fetch_one(&*self.pool)).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
         let x: bool = ex.get("ex");
@@ -126,14 +126,16 @@ impl Driver for DatasourcePostgres {
                 map.insert("SCHEMA_ADMIN".to_string(), self.schema_admin.clone());
                 let table = include_str!("../init/pg_init.sql");
                 TeraManager::new(map).apply("core.sql", table)?
-            } else { include_str!("../init/pg_init.sql").to_string() };
+            } else {
+                TeraManager::default().apply("core.sql", include_str!("../init/pg_init.sql"))?
+            };
 
         block_on(sqlx::query(&*table).execute(&*self.pool)).map_err(|e| Error::SQLError(format!("{:?}", e)))?;
         Ok(())
     }
 
     fn get_name(&self) -> &str {
-        self.borrow().name.as_str()
+        self.name.as_str()
     }
 
     fn close(&self) {
@@ -209,12 +211,21 @@ impl Drop for DatasourcePostgres {
     }
 }
 
-#[cfg(test)]
+// postgres
+#[cfg(all(test))]
 mod local_test {
     use crate::driver::postgres::DatasourcePostgres;
-    use crate::driver::DriverFactory;
+    use crate::driver::{DriverFactory, Driver, RmigEmptyResult};
     use crate::error::Error;
     use crate::configuration_properties::DatasourceProperties;
+    use futures::executor::block_on;
+    use log4rs::append::console::{ConsoleAppender, Target};
+    use log4rs::Config;
+    use log4rs::config::{Appender, Root};
+    use log::LevelFilter;
+    use crate::changelogs::{Migration, Query};
+    use std::collections::VecDeque;
+    use sqlx::Row;
 
     #[test]
     pub fn test_crc_32() {
@@ -226,5 +237,120 @@ mod local_test {
     }
 
     #[test]
-    pub fn create_with_error() {}
+    pub fn check_connection() -> RmigEmptyResult {
+        let postgres = create_local_connection();
+        assert_eq!((), postgres.validate_connection()?);
+        assert_eq!((), block_on(postgres.lock())?);
+        assert_eq!((), block_on(postgres.unlock())?);
+        Ok(())
+    }
+
+    #[test]
+    pub fn create_core_table() -> RmigEmptyResult {
+        let postgres = create_local_connection();
+        assert_eq!((), postgres.validate_connection()?);
+        assert_eq!((), block_on(postgres.lock())?);
+
+        postgres.check_rmig_core_table()
+            .unwrap_or_else(|_e| postgres.create_rmig_core_table().unwrap());
+
+        assert_eq!((), postgres.check_rmig_core_table()?);
+
+        assert_eq!((), block_on(postgres.unlock())?);
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_get_name() -> RmigEmptyResult {
+        let postgres = create_local_connection();
+        assert_eq!("localhost", postgres.get_name());
+        Ok(())
+    }
+
+    #[test]
+    pub fn migrate_and_add_new_migration() -> RmigEmptyResult {
+        let postgres = create_local_connection();
+        assert_eq!("localhost", postgres.get_name());
+        assert_eq!((), postgres.validate_connection()?);
+
+        let name = "test_dir".to_string();
+        let hash = "md5".to_string();
+
+        assert_eq!((), block_on(postgres.lock())?);
+        let migration = create_migration(name.to_owned(), hash.to_owned());
+
+        postgres.check_rmig_core_table().unwrap_or_else(|_e|
+            postgres.create_rmig_core_table().unwrap()
+        );
+
+        postgres.find_in_core_table(name.to_owned(), hash.to_owned()).unwrap_or_else(
+            |e| {
+                postgres.migrate(migration.query_list.iter().map(|i| i).collect()).unwrap();
+                block_on(postgres.add_new_migration(migration)).unwrap();
+            }
+        );
+
+        let row: (i32, ) = block_on(sqlx::query_as("SELECT 150 as result FROM rmig_test WHERE test = '123456'").fetch_one(&*postgres.pool)).unwrap();
+        assert_eq!(150, row.0);
+
+        assert_eq!((), block_on(postgres.unlock())?);
+
+        // Clear information
+        block_on(sqlx::query("DROP TABLE rmig_test").execute(&*postgres.pool)).unwrap();
+        block_on(sqlx::query("DELETE FROM changelogs WHERE FILENAME = $1 AND HASH = $2")
+            .bind(name.to_owned())
+            .bind(hash.to_owned())
+            .execute(&*postgres.pool)).unwrap();
+        Ok(())
+    }
+
+    fn create_migration(name: String, hash: String) -> Migration {
+        let mut querys = VecDeque::new();
+        querys.push_back(Query {
+            query: "SELECT 1".to_string(),
+            opts: Default::default(),
+        });
+        querys.push_back(Query {
+            query: "CREATE TABLE rmig_test(test TEXT)".to_string(),
+            opts: Default::default(),
+        });
+        querys.push_back(Query {
+            query: "INSERT INTO rmig_test(test) VALUES('123456')".to_string(),
+            opts: Default::default(),
+        });
+        Migration {
+            name,
+            hash,
+            separator: "".to_string(),
+            order: 1,
+            query_list: querys,
+            options: None,
+        }
+    }
+
+    fn create_local_connection() -> DatasourcePostgres {
+        init_logger();
+        let url = std::env::var("PG_DB_URL").unwrap_or("postgres://postgres:example@localhost:5432/postgres".to_owned());
+        let properties = DatasourceProperties::new(Some("Local pg ds".to_string()), url, None);
+        DatasourcePostgres::new(&properties)
+    }
+
+    fn init_logger() -> RmigEmptyResult {
+        let stdout = ConsoleAppender::builder().target(Target::Stdout).build();
+        let config = Config::builder()
+            .appender(Appender::builder().build("stdout", Box::new(stdout)))
+            .build(
+                Root::builder()
+                    .appender("stdout")
+                    .build(LevelFilter::Info),
+            )
+            .map_err(|_e| Error::LoggerConfigurationError(String::from("Configuration is empty or include another error.")))?;
+
+        // Use this to change log levels at runtime.
+        // This means you can change the default log level to trace
+        // if you are trying to debug an issue and need more logs on then turn it off
+        // once you are done.
+        log4rs::init_config(config).map_err(|e| Error::LoggerConfigurationError(e.to_string()));
+        Ok(())
+    }
 }
