@@ -258,6 +258,7 @@ impl AppRmigCli {
 
         let changelogs = impl_changelogs_from_cfg.changelog.changelogs;
 
+        // TODO: Допилить тут нормальную асинхронщину. Метод нормальный, но по факту внутри ждем постоянно.
         for changelog in changelogs {
             run_changelog(&ds_v, changelog).await
         }

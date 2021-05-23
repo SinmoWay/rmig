@@ -35,7 +35,6 @@ impl DriverFactory<DatasourceOracle> for DatasourceOracle {
             panic!("Datasource name is required, for oracle connection.");
         }
 
-        debug!("Creating datasource pool: {}. User: {}", &*host, &*user);
         let manager = OracleConnectionManager::new(
             &*user,
             &*password,
