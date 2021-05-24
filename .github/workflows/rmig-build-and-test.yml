@@ -24,8 +24,8 @@ jobs:
 
       - uses: actions-rs/cargo@v1
         with:
-          command: fmt
-          args: +nightly --all --check
+          command: +nightly fmt
+          args: --verbose --all
 #  check:
 #    name: Check
 #    runs-on: ubuntu-latest
