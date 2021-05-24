@@ -45,7 +45,6 @@ jobs:
 #          args: --all-target --all-features
 
   build:
-    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -74,7 +73,6 @@ jobs:
       matrix:
         postgres: [latest]
         runtime: [postgres]
-    needs: check
     steps:
       - uses: actions/checkout@v2
 
