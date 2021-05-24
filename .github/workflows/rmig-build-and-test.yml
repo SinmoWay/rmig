@@ -20,21 +20,32 @@ jobs:
         with:
           rust-version: nightly
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-
       - run: rustup component add rustfmt --toolchain nightly
 
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: +nightly --all --check
+#  check:
+#    name: Check
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#
+#      - uses: hecrj/setup-rust-action@v1
+#        with:
+#          rust-version: nightly
+#
+#      -run: rustup component add clippy
+#
+#
+#      - uses: actions-rs/cargo@v1
+#        with:
+#          command: clippy
+#          args: --all-target --all-features
 
   build:
-
+    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -55,3 +66,37 @@ jobs:
       - uses: actions-rs/clippy@master
         with:
           args: --all-features --all-targets
+
+  postgres:
+    name: Postgres
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        postgres: [latest]
+        runtime: [postgres]
+    needs: check
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: nightly
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: >
+            --no-default-features
+            --features postgres
+
+      - run: docker-compose -f .docker/docker-compose.yml run -d -p 5432:5432 postgres_${{ matrix.postgres }}
+      - run: sleep 15
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >
+            --no-default-features
+            --features postgres
+        env:
+          DATABASE_URL: postgres://postgres:example@localhost:5432/postgres
