@@ -14,7 +14,7 @@ use sqlx::{PgPool, Row};
 use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
 use std::str::FromStr;
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 #[derive(Clone, Debug)]
 pub struct DatasourcePostgres {
@@ -44,7 +44,7 @@ impl DriverFactory<DatasourcePostgres> for DatasourcePostgres {
                             "Datasource is not configured or not working. {}\nError: {:?}",
                             &name, e
                         )
-                        .to_string(),
+                            .to_string(),
                     )
                 })
                 .unwrap(),
@@ -109,16 +109,16 @@ impl Driver for DatasourcePostgres {
                 .bind(&hash)
                 .fetch_one(&*self.pool),
         )
-        // language=RUST
-        .map_err(|e| {
-            Error::SQLError(
-                format!(
-                    "Row with filename {} and hash {} return error.\nError: {:?}",
-                    &name, &hash, e
+            // language=RUST
+            .map_err(|e| {
+                Error::SQLError(
+                    format!(
+                        "Row with filename {} and hash {} return error.\nError: {:?}",
+                        &name, &hash, e
+                    )
+                        .to_string(),
                 )
-                .to_string(),
-            )
-        })?;
+            })?;
 
         let erow: bool = query.get("erow");
         // If row exists find row with hash.
@@ -185,17 +185,24 @@ impl Driver for DatasourcePostgres {
         let database_name = current_database(self.pool.borrow()).await?;
         let lock_id = generate_lock(database_name);
 
+        let start = Instant::now();
+
         // Locking
         // https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS
         // https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS-TABLE
 
+        info!("Starting locking session with lock ID: {}", &lock_id);
         // language=SQL
-        let _ = sqlx::query("SELECT pg_advisory_lock($1)")
+        sqlx::query("SELECT pg_advisory_lock($1)")
             .bind(lock_id)
             .execute(self.pool.borrow())
             // language=RUST
             .await
             .map_err(|e| Error::SQLError(format!("{:?}", e)))?;
+
+        let elapsed = start.elapsed();
+
+        info!("Success locking session! Time elapsed: {:?}", elapsed);
 
         Ok(())
     }
@@ -209,7 +216,7 @@ impl Driver for DatasourcePostgres {
         // https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS-TABLE
 
         // language=SQL
-        let _ = sqlx::query("SELECT pg_advisory_unlock($1)")
+        sqlx::query("SELECT pg_advisory_unlock($1)")
             .bind(lock_id)
             .execute(self.pool.borrow())
             // language=RUST
@@ -270,6 +277,9 @@ mod local_test {
     use log4rs::Config;
     use sqlx::Row;
     use std::collections::VecDeque;
+    use crate::test_utils::init_logger;
+    use std::time::Duration;
+    use log::info;
 
     #[test]
     pub fn test_crc_32() {
@@ -282,26 +292,39 @@ mod local_test {
 
     #[test]
     pub fn check_connection() -> RmigEmptyResult {
-        let postgres = create_local_connection();
-        assert_eq!((), postgres.validate_connection()?);
-        assert_eq!((), block_on(postgres.lock())?);
-        assert_eq!((), block_on(postgres.unlock())?);
+        let mut hvec = vec![];
+        for i in 1..5 {
+            let h = std::thread::spawn(move || {
+                let postgres = create_local_connection();
+                info!("Starting thread number: {}", i);
+                postgres.validate_connection().unwrap();
+                block_on(postgres.lock()).unwrap();
+                std::thread::sleep(Duration::from_secs(5));
+                block_on(postgres.unlock()).unwrap();
+                info!("Stop thread number: {}", i);
+
+            });
+            hvec.push(h);
+        }
+        for h in hvec {
+            h.join().unwrap()
+        }
         Ok(())
     }
 
     #[test]
     pub fn create_core_table() -> RmigEmptyResult {
         let postgres = create_local_connection();
-        assert_eq!((), postgres.validate_connection()?);
-        assert_eq!((), block_on(postgres.lock())?);
+        postgres.validate_connection()?;
+        block_on(postgres.lock())?;
 
         postgres
             .check_rmig_core_table()
             .unwrap_or_else(|_e| postgres.create_rmig_core_table().unwrap());
 
-        assert_eq!((), postgres.check_rmig_core_table()?);
+        postgres.check_rmig_core_table()?;
 
-        assert_eq!((), block_on(postgres.unlock())?);
+        block_on(postgres.unlock())?;
         Ok(())
     }
 
@@ -316,12 +339,12 @@ mod local_test {
     pub fn migrate_and_add_new_migration() -> RmigEmptyResult {
         let postgres = create_local_connection();
         assert_eq!("localhost", postgres.get_name());
-        assert_eq!((), postgres.validate_connection()?);
+        postgres.validate_connection()?;
 
         let name = "test_dir".to_string();
         let hash = "md5".to_string();
 
-        assert_eq!((), block_on(postgres.lock())?);
+        block_on(postgres.lock())?;
         let migration = create_migration(name.to_owned(), hash.to_owned());
 
         postgres
@@ -337,14 +360,12 @@ mod local_test {
                 block_on(postgres.add_new_migration(migration)).unwrap();
             });
 
-        let row: (i32,) = block_on(
+        let row: (i32, ) = block_on(
             sqlx::query_as("SELECT 150 as result FROM rmig_test WHERE test = '123456'")
                 .fetch_one(&*postgres.pool),
         )
-        .unwrap();
+            .unwrap();
         assert_eq!(150, row.0);
-
-        assert_eq!((), block_on(postgres.unlock())?);
 
         // Clear information
         block_on(sqlx::query("DROP TABLE rmig_test").execute(&*postgres.pool)).unwrap();
@@ -354,7 +375,10 @@ mod local_test {
                 .bind(hash.to_owned())
                 .execute(&*postgres.pool),
         )
-        .unwrap();
+            .unwrap();
+
+        block_on(postgres.unlock())?;
+
         Ok(())
     }
 
@@ -384,28 +408,9 @@ mod local_test {
 
     fn create_local_connection() -> DatasourcePostgres {
         init_logger();
-        let url = std::env::var("PG_DB_URL")
+        let url = std::env::var("DATABASE_URL")
             .unwrap_or("postgres://postgres:example@localhost:5432/postgres".to_owned());
         let properties = DatasourceProperties::new(Some("Local pg ds".to_string()), url, None);
         DatasourcePostgres::new(&properties)
-    }
-
-    fn init_logger() -> RmigEmptyResult {
-        let stdout = ConsoleAppender::builder().target(Target::Stdout).build();
-        let config = Config::builder()
-            .appender(Appender::builder().build("stdout", Box::new(stdout)))
-            .build(Root::builder().appender("stdout").build(LevelFilter::Info))
-            .map_err(|_e| {
-                Error::LoggerConfigurationError(String::from(
-                    "Configuration is empty or include another error.",
-                ))
-            })?;
-
-        // Use this to change log levels at runtime.
-        // This means you can change the default log level to trace
-        // if you are trying to debug an issue and need more logs on then turn it off
-        // once you are done.
-        log4rs::init_config(config).map_err(|e| Error::LoggerConfigurationError(e.to_string()));
-        Ok(())
     }
 }

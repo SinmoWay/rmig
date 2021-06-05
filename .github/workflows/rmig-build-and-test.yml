@@ -94,3 +94,37 @@ jobs:
             --features postgres
         env:
           DATABASE_URL: postgres://postgres:example@localhost:5432/postgres
+
+  oracle_xe:
+    name: Oracle
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      matrix:
+        postgres: [latest]
+        runtime: [ora]
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: nightly
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: >
+            --no-default-features
+            --features ora
+
+      - run: docker-compose -f .docker/docker-compose.yml run -d -p 1521:1521 oracle-18.4.0
+      - run: sleep 15
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: >
+            --no-default-features
+            --features ora
+        env:
+          DATABASE_URL: oracle://sys as sysdba@localhost:1521/XE

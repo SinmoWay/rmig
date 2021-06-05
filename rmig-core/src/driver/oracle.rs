@@ -177,3 +177,20 @@ impl Driver for DatasourceOracle {
 impl Drop for DatasourceOracle {
     fn drop(&mut self) {}
 }
+
+
+#[cfg(test)]
+mod local_test {
+    use crate::configuration_properties::DatasourceProperties;
+    use crate::driver::oracle::DatasourceOracle;
+    use crate::driver::DriverFactory;
+    use crate::test_utils::init_logger;
+
+    fn create_local_connection() -> DatasourceOracle {
+        init_logger();
+        let url = std::env::var("DATABASE_URL")
+            .unwrap_or("postgres://postgres:example@localhost:5432/postgres".to_owned());
+        let properties = DatasourceProperties::new(Some("Local pg ds".to_string()), url, None);
+        DatasourceOracle::new(&properties)
+    }
+}

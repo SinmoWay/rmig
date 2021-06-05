@@ -354,8 +354,6 @@ impl<'a> ChangelogRunner<'a> {
 /// TODO: Write tests
 #[cfg(test)]
 mod local_test {
-    use crate::changelogs::{ChangelogRunner, QueryOptions};
-    use std::collections::HashMap;
 
     #[test]
     pub fn test_md5() -> anyhow::Result<()> {

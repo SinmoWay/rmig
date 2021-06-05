@@ -8,6 +8,7 @@ edition = "2018"
 
 [dev-dependencies]
 criterion = "0.3.4"
+grcov = "0.8.0"
 
 [[bench]]
 name = "tera"
