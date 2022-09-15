@@ -48,7 +48,7 @@ version = "0.4.14"
 version = "1.0.0"
 
 [dependencies.sqlx]
-version = "0.5.1"
+version = "0.6.2"
 features = ["runtime-async-std-native-tls", "default", "postgres", "chrono", "uuid"]
 
 [features]
